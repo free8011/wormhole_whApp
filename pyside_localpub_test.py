@@ -1,11 +1,12 @@
- # -*- coding:utf-8 -*-
+# coding:utf-8
 import sys
 import os
-import whimage
 import locale
 from api import whAPI
+from api import whDataModels
 from wormholeAPI.whDataModels import whEnvData
 from wormholeAPI.whAPIModels import whCompany
+from whimage import Whimage
 from pprint import pprint
 try:
     from PyQt4 import QtCore, QtGui, uic
@@ -46,9 +47,9 @@ taskthumbnail = u"C:\\Users\\simo\\Pictures\\이미지\\thumbnail_한글 - 75px.
 
 # print os.path.abspath('')
 
-def gettaskinfo(env):
+def gettaskinfo(whapi, env):
     shotname = u''
-    wh = whAPI.Get(corpPrefix=env.Company, url=env.ServerName)
+    wh = whapi
     pprint(wh.ContactList(projectId=env.Project,shotId=env.ShotName))
 
     for shots in (wh.ShotNames(projectId=env.Project,seqId=env.SeqName)['shotList']):
@@ -68,14 +69,17 @@ def gettaskinfo(env):
     # pprint(env.__dict__)
     return env
 
+
+
 class LocalPub(QWidget):
     def __init__(self,parent=None):
         super(LocalPub, self).__init__(parent)
         self.selectedFile = ""
         self.whcom = whCompany()
         self.envs = whEnvData('./wormHole_shot.env')
-
-        self.env = gettaskinfo(self.envs)
+        # self.env = gettaskinfo(self.envs)
+        self.env = whDataModels.gettaskinfo(self.envs)
+        self.wh = whAPI.Get(corpPrefix=self.env.Company, url=self.env.ServerName)
 
         uipath = './ui/localpubtool.ui'
         try:
@@ -84,14 +88,19 @@ class LocalPub(QWidget):
             uic.loadUi(uipath, self)
         self.setinfo()
 
+        # download useriamge
+        imageWh = Whimage(self)
+        userimage = imageWh.getThumbnail(host=self.env.ServerName,corpPrefix=self.env.Company, rootdir=self.env.SysUserHome,userId=self.env.UserID)
+        outputimage = os.path.join(os.path.dirname(userimage),'circular',os.path.split(userimage)[1])
+
 
         pixmap2 = QtGui.QPixmap(taskthumbnail)
         self.label_2.setPixmap(pixmap2)
 
-        userimage = "./image/test3.jpg"
+        # userimage = "./image/test3.jpg"
         maskimage = "./image/mask.png"
-        outputimage = "./image/user/test3.png"
-        whimage.circular(ofile=userimage, output=outputimage, mask=maskimage)
+        # outputimage = "./image/user/test3.png"
+        imageWh.circular(ofile=userimage, output=outputimage, mask=maskimage)
         pixmap = QtGui.QPixmap(outputimage)
         self.userIcon.setPixmap(pixmap)
 
