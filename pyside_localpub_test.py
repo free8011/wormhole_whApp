@@ -12,7 +12,7 @@ try:
     from PyQt4 import QtCore, QtGui, uic
     from PyQt4.QtGui import QApplication, QMainWindow, QPushButton, QWidget
 except ImportError as a:
-    print 'use PySide'
+    # print 'use PySide'
     from PySide import QtCore, QtGui
     from PySide.QtGui import QApplication, QMainWindow, QPushButton, QWidget
     import pyside_uicfix
@@ -36,50 +36,25 @@ except AttributeError:
 userpath = os.path.join(os.path.expanduser("~"), 'wormhole','presets')
 locale,unicode_locale = locale.getdefaultlocale()
 
-dic = {"preview":[u"C:\\Users\\simo\\Pictures\\이미지\\thumbnail_한글 - 복사본 (2) - 복사본.png"],
-       "pubfile":[u"C:\\Users\\simo\\Pictures\\RNT_sq001_S001_Animation_msoon_471_0018-F_0_1.png",u"‪C:\\Users\\simo\\Pictures\\thumbnail_한글.png",u"C:\\Users\\simo\\Pictures\\test34_00.png"],
-       "dir":[u"C:\\Users\\simo\\Pictures\이미지"],
-       "previewtarget":u"C:\\Users\\simo\\Pictures2\\prview임",
-       "pubdirtarget":u"C:\\Users\\simo\\Pictures2\\pubfiles임"}
 
-taskthumbnail = u"C:\\Users\\simo\\Pictures\\이미지\\thumbnail_한글 - 75px.png"
-# wh = whAPI.Get(corpPrefix=corpPrefix,url=url)
-
-# print os.path.abspath('')
-
-def gettaskinfo(whapi, env):
-    shotname = u''
-    wh = whapi
-    pprint(wh.ContactList(projectId=env.Project,shotId=env.ShotName))
-
-    for shots in (wh.ShotNames(projectId=env.Project,seqId=env.SeqName)['shotList']):
-        if shots['shotId'] == env.ShotName:
-            shotname = unicode(shots['shotNm'])
-    for seqs in wh.Seqnames(projectId=env.Project)['sequenceList']:
-        if seqs['sequenceId'] == env.SeqName:
-            seqname = unicode(seqs['sequenceNm'])
-            print seqname , env.SeqName
-    if env.DirType == 'shot':
-        env.__setattr__('SeqId',env.SeqName)
-        env.__setattr__('SeqName',seqname)
-        env.__setattr__('ShotId',env.ShotName)
-        env.__setattr__('ShotName',shotname)
-    env.__setattr__('ProjectName','projectname')
-    # env.__setattr__('UserName',username)
-    # pprint(env.__dict__)
-    return env
-
+gotListOfDataType = ['singleimage', 'sequenceimage', 'modeldata', 'script', 'photoshop', 'cache', 'mocap',
+                             'nuke', 'modo', 'houdini', 'maya', 'AfterEffects', 'etc']
 
 
 class LocalPub(QWidget):
     def __init__(self,parent=None):
         super(LocalPub, self).__init__(parent)
         self.selectedFile = ""
+        self.selectedPreview = ""
+        self.nametype = 'name'
+
+
         self.whcom = whCompany()
         self.envs = whEnvData('./wormHole_shot.env')
         # self.env = gettaskinfo(self.envs)
-        self.env = whDataModels.gettaskinfo(self.envs)
-        self.wh = whAPI.Get(corpPrefix=self.env.Company, url=self.env.ServerName)
+        self.whdatas = whDataModels.WormholeData(self.envs)
+        self.env = self.whdatas.gettaskinfo()
+        # self.projectPubPaths = self.whdatas.ProjectFilePath()
 
         uipath = './ui/localpubtool.ui'
         try:
@@ -90,19 +65,18 @@ class LocalPub(QWidget):
 
         # download useriamge
         imageWh = Whimage(self)
-        userimage = imageWh.getThumbnail(host=self.env.ServerName,corpPrefix=self.env.Company, rootdir=self.env.SysUserHome,userId=self.env.UserID)
+        userimage = imageWh.getUserThumbnail(host=self.env.ServerName,corpPrefix=self.env.Company, rootdir=self.env.SysUserHome,userId=self.env.UserID)
         outputimage = os.path.join(os.path.dirname(userimage),'circular',os.path.split(userimage)[1])
-
-
-        pixmap2 = QtGui.QPixmap(taskthumbnail)
-        self.label_2.setPixmap(pixmap2)
-
-        # userimage = "./image/test3.jpg"
         maskimage = "./image/mask.png"
-        # outputimage = "./image/user/test3.png"
         imageWh.circular(ofile=userimage, output=outputimage, mask=maskimage)
         pixmap = QtGui.QPixmap(outputimage)
         self.userIcon.setPixmap(pixmap)
+
+        # download task image
+        taskthumbnailURL = self.whdatas.ThumbnailPath()
+        taskthumbnail = imageWh.getThumbnail(self.env, url=taskthumbnailURL)
+        pixmap2 = QtGui.QPixmap(taskthumbnail)
+        self.label_2.setPixmap(pixmap2)
 
         self.listwidget = QtGui.QListWidget()
         self.previewfile = QtGui.QLabel()
@@ -119,22 +93,32 @@ class LocalPub(QWidget):
 
         self.tableWidget.resizeColumnsToContents()
         self.tableWidget.resizeRowsToContents()
-        # self.tableWidget.setFixedHeight(0)
-
-        # self.verticalLayout_11.addStretch()
-
         self.setFixedHeight(800)
 
+        # project pub path rool
+
+
+
+
+
         # button signal
-        self.attach_btn.clicked.connect(self.selfile)
+        self.attach_btn.clicked.connect(self.attach)
         self.review_btn.clicked.connect(self.selpreview)
-        self.attachdir_btn.clicked.connect(self.seldir)
+        # self.attachdir_btn.clicked.connect(self.seldir)
         self.send_btn.clicked.connect(self.send)
+
+        # test
+        # self.test = QtGui.QTableWidget()
+        self.tableWidget.itemSelectionChanged.connect(self.setpubFile)
+
+    def setpubFile(self):
+        original,target,type = self.tableWidget.selectedIndexes()
+        self.selectedFile = self.tableWidget.item(target.row(),1).text()
+
     def setinfo(self):
-        print self.env.__dict__
-
-
+        # print self.env.__dict__
         self.projIdV_lb.setText(unicode(self.env.Project))
+        self.projNmV_lb.setText(unicode(self.env.ProjectName))
         if self.env.DirType == "asset":
             self.assetIdV_lb.setText(unicode(self.env.AssetPrefix))
             self.assetNmV_lb.setText(unicode(self.env.AssetName))
@@ -158,14 +142,20 @@ class LocalPub(QWidget):
             self.shotNmV_lb.setText(self.env.ShotName)#----시퀀스 이름 변경할것
 
         self.taskTypeV_lb.setText(unicode(self.env.TaskType))
-        # self.userId_lb.setText(self.env.UserID)
-        # self.userIdV_lb.setText(self.env.UserName)
+        self.userIdV_lb.setText(self.env.UserID)
+        self.userNmV_lb.setText(self.env.UserName)
 
 
 
 
     def gettargetpath(self):
-        targetpath = u"C:\\Users\\simo\\Pictures\\pubtest임"
+        # data = {'[VERSIONNUMBER]':'10','[PDATATYPE]':'IMAGE'}
+        paths = self.whdatas.ProjectFilePath(nametype=self.nametype)
+        if self.env.DirType == 'shot':
+            targetpath = paths['fixShotPubPath']
+        elif self.env.DirType == 'asset':
+            targetpath = paths['fixAssetPubPath']
+        # targetpath = u"C:\\Users\\simo\\Pictures\\pubtest임"
         return targetpath
 
     def getpreviewtargetpath(self):
@@ -186,13 +176,13 @@ class LocalPub(QWidget):
             self.previewfile.setToolTip(targetpath)
 
             self.preview_VLayout.addWidget(self.previewfile)
-        self.selectedFile = file
+        self.selectedPreview = file
         self.preview_VLayout.setContentsMargins(30,0,0,0)
 
 
 
-    def seldir(self):
-        self.dialog = QtGui.QFileDialog(self,'Title', "d:\\temp")
+    def attach(self):
+        self.dialog = QtGui.QFileDialog(self,'Title', ".")
         self.dialog.setOption(self.dialog.DontUseNativeDialog, True)
         self.dialog.setFileMode(self.dialog.ExistingFiles)
         btns = self.dialog.findChildren(QtGui.QPushButton)
@@ -205,6 +195,7 @@ class LocalPub(QWidget):
             inds = self.dialog.tree.selectionModel().selectedIndexes()
             files = []
             for i in inds:
+                print str(i.data().toString())
                 if i.column() == 0:
                     files.append(os.path.join(str(self.dialog.directory().absolutePath()), str(i.data().toString())))
             self.dialog.selectedFiles = files
@@ -216,28 +207,23 @@ class LocalPub(QWidget):
         #                                               QtGui.QFileDialog.DontUseNativeDialog)
         self.selfiles =  self.dialog.selectedFiles()
         self.settablewidget()
+
     def settablewidget(self):
-        i=0
-        self.tableWidget.setRowCount(self.selfiles.count())
+        i = self.tableWidget.rowCount()
+        self.tableWidget.setRowCount(self.tableWidget.rowCount()+self.selfiles.count())
         for file in self.selfiles:
 
             if os.path.isfile(file):
                 file = str(file)
                 target = file.replace(os.path.dirname(file), self.gettargetpath())
-                # oitem = QtGui.QTableWidgetItem(unicode(file))
-                # titem = QtGui.QTableWidgetItem(unicode(target))
-                # pathtype = QtGui.QTableWidgetItem(unicode('file'))
+
                 self.tableWidget.setItem(i, 0, QtGui.QTableWidgetItem(unicode(file)))
                 self.tableWidget.setItem(i, 1, QtGui.QTableWidgetItem(unicode(target)))
                 self.tableWidget.setItem(i, 2, QtGui.QTableWidgetItem(unicode('file')))
 
             elif os.path.isdir(file):
                 dir = str(file)
-                dirrootpath =  dir.split(os.path.basename(dir))[0]
-                target = dir.replace(dirrootpath ,self.gettargetpath())
-                # oitem = QtGui.QTableWidgetItem(unicode(dir))
-                # titem = QtGui.QTableWidgetItem(unicode(target))
-                # pathtype = QtGui.QTableWidgetItem(unicode('directory'))
+                target = os.path.join(self.gettargetpath(), os.path.basename(dir))
 
                 self.tableWidget.setItem(i, 0, QtGui.QTableWidgetItem(unicode(dir)))
                 self.tableWidget.setItem(i, 1, QtGui.QTableWidgetItem(unicode(target)))
@@ -254,8 +240,8 @@ class LocalPub(QWidget):
 
     def selfile(self):
         filenames = QtGui.QFileDialog.getOpenFileNames(self, 'Select Files', '.')
-        print len(filenames)
-        print filenames
+        # print len(filenames)
+        # print filenames
         self.tableWidget.setRowCount(len(filenames))
         i=0
         for files in filenames:
@@ -270,53 +256,12 @@ class LocalPub(QWidget):
                 self.tableWidget.setItem(i, 0, oitem)
                 self.tableWidget.setItem(i, 1, titem)
                 self.tableWidget.setItem(i, 2, pathtype)
-                print i, ':::' ,oitem, '    --->   ', titem, ' : ',pathtype
+                # print i, ':::' ,oitem, '    --->   ', titem, ' : ',pathtype
                 i += 1
 
         self.tableWidget.resizeColumnsToContents()
         self.tableWidget.resizeRowsToContents()
 
-    def detail(self):
-        print 'pass'
-    #     # self.tableWidget.clear()
-    #     self.tableWidget.setRowCount(0)
-    #
-    #     if self.tableWidget.height() > 0:
-    #         self.tableWidget.setFixedHeight(0)
-    #         self.setFixedHeight(800)
-    #     else:
-    #         self.tableWidget.setFixedHeight(200)
-    #         self.setFixedHeight(1000)
-    #
-    #     selfiles = []
-    #     targetfile = []
-    #     if self.listwidget.count() >= 1:
-    #         self.tableWidget.setRowCount(self.listwidget.count())
-    #         for row in range(self.listwidget.count()):
-    #
-    #             item = self.listwidget.item(row)
-    #             file = unicode(item.text())
-    #
-    #             if os.path.isfile(file):
-    #                 target = (file.replace(os.path.dirname(file), self.gettargetpath()))
-    #                 oitem = QtGui.QTableWidgetItem(file)
-    #                 titem = QtGui.QTableWidgetItem(target)
-    #                 pathtype = QtGui.QTableWidgetItem(unicode('file'))
-    #
-    #                 # self.tableWidget.insertRow(row)
-    #                 self.tableWidget.setItem(row, 0, oitem)
-    #                 self.tableWidget.setItem(row, 1, titem)
-    #                 self.tableWidget.setItem(row, 2, pathtype)
-    #                 print row, ':::' ,oitem, '    --->   ', titem, ' : ',pathtype
-    #
-    #             elif os.path.isdir(file):
-    #                 name = os.path.basename(os.path.normpath(file))
-    #                 targetfile.append(os.path.join(name, self.gettargetpath))
-    #             else:
-    #                 pass
-    #
-    #     self.tableWidget.resizeColumnsToContents()
-    #     self.tableWidget.resizeRowsToContents()
 
     def send(self):
         pass
@@ -326,7 +271,7 @@ class ResultUI(QWidget):
         super(ResultUI, self).__init__(parent)
 
         uipath = './ui/replacePath.ui'
-        print uipath
+        # print uipath
         try:
             pyside_uicfix.loadUi(uipath, self)
         except NameError:
@@ -351,8 +296,8 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(self.resultui)
         self.setWindowTitle("Check target path")
         self.show()
-        print self.pubtool.selectedFile
-        print 'count = ',self.pubtool.listwidget.count()
+        # print self.pubtool.selectedFile
+        # print 'count = ',self.pubtool.listwidget.count()
 
 
 if __name__ == '__main__':

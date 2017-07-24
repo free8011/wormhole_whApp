@@ -2,6 +2,7 @@
 import os
 import sys
 import urllib
+import urlparse
 from PIL import Image, ImageOps
 from api import whAPI
 reload(sys)
@@ -27,19 +28,31 @@ class Whimage:
         outputimg.save(output)
         return outputimg
 
-    def getThumbnail(self,host='',rootdir='',corpPrefix='', userId=''):
+    def getUserThumbnail(self,host='',rootdir='',corpPrefix='', userId=''):
         url = 'http://%s/dat/img/photo_%s.png' % (host, userId)
         rootpath = (os.path.join(rootdir,corpPrefix,'images','users','source'))
         filename = 'photo_%s.png'%userId
         if not os.path.exists(rootpath):
             os.makedirs(rootpath)
         imagePath = os.path.join(rootpath,filename)
-
-        # imagePath = "%s/images/users/source/photo_%s.png" % (rootdir, corpPrefix, projectId, name)
-
         urllib.urlretrieve(url, imagePath)
         return  imagePath
 
+    # def getThumbnail(self,host='',rootdir='',corpPrefix='', type='shot', ):
+    def getThumbnail(self,env ,url=''):
+        # host = self.env.ShotName, corpPrefix = self.env.Company, rootdir = self.env.SysUserHome, type = self.env.DirType, taskId = self.env
+        if env.DirType == 'shot':
+            rootpath = os.path.join(env.SysUserHome, env.Company, env.Project,'shot_images', env.SeqId)
+        elif env.DirType == 'asset':
+            rootpath = os.path.join(env.SysUrootdir, env.corpPrefix, env.Project,'asset_images')
+
+        if not os.path.exists(rootpath):
+            os.makedirs(rootpath)
+        imagePath = os.path.join(rootpath,os.path.split(url)[1])
+        serverName = 'http://%s'%env.ServerName
+        thumbnailURL = urlparse.urljoin(serverName,url)
+        urllib.urlretrieve(thumbnailURL,imagePath)
+        return imagePath
 
 
 #

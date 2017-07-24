@@ -8,11 +8,11 @@ class ClientOs():
         self.whAppPath = ''
         self.getOSType = ''
         self.userPath = os.path.join(os.path.expanduser("~"), 'wormhole','presets')
+
         if platform.system() == 'Windows':
             import _winreg
             key = _winreg.OpenKey(_winreg.HKEY_LOCAL_MACHINE,'SOFTWARE\\Classes\\WHPlugin\\shell\\open\\command',0,_winreg.KEY_READ)
             (value, valuetype) = _winreg.QueryValueEx(key, 'Path')
-            # path =  value.replace('\\','/').replace('//','/')
             self.syspath = os.path.join(value,'bin','wormhole_api','whpy')
 
             self.whAppPath = os.path.join(value,'bin','whApp')

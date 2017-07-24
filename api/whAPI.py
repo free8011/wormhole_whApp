@@ -54,6 +54,16 @@ class Get:
         return self.__getdata(apiname=apiname, data=data)
 
     def MovAbsNumber(self,projectId="",type="",assetId="",shotId="",data={},dictype=False):
+        '''
+
+        :param projectId:
+        :param type:-> 'Movie' or 'asset' or 'shot'
+        :param assetId:
+        :param shotId:
+        :param data:
+        :param dictype:
+        :return:
+        '''
         apiname = "getMovAbsNumber"
         if dictype:
             pass
@@ -81,7 +91,17 @@ class Get:
         else:
             data["projectId"] = projectId
         return self.__getdata(apiname=apiname, data=data)
-
+    def getInfo(self, projectId="",getType="",seqId="",assetId="",shotId="",data={}, dictype=False):
+        apiname = "getInfo"
+        if dictype:
+            pass
+        else:
+            data["projectId"] = projectId
+            data["getType"] = getType
+            data["seqId"] = seqId
+            data["assetId"] = assetId
+            data["shotId"] = shotId
+        return self.__getdata(apiname=apiname, data=data)
     def ThumbnailPath(self, projectId="",getType="",seqId="",assetId="",shotId="",data={}, dictype=False):
         apiname = "getInfo"
         if dictype:
