@@ -376,7 +376,7 @@ class Post():
             data["workingShotDir"] = workingShotDir
         return self.__getdata(apiname=apiname, data=data)
 
-    def publishAsset(self,projectId="",assetId="",versionNumber="",publisherId="",taskTypeCd="",filePublish="",fileHiRes="",fileAnimRes="",movie="",tag="",originalSelectedFile="",originalSelectedMovie="",publishInfo="",publishComment="",PdataType="",publishIcon="",data={},dictype=False):
+    def publishAsset(self,projectId="",assetId="",versionNumber="",publisherId="",taskTypeCd="",filePublish="",fileHiRes="",fileAnimRes="",fileLowRes="",movie="",tag="",originalSelectedFile="",originalSelectedMovie="",publishInfo="",publishComment="",PdataType="",publishIcon="",data={},dictype=False):
         apiname = "publishAsset"
         if dictype:
             pass
@@ -389,6 +389,7 @@ class Post():
             data["filePublish"] = filePublish
             data["fileHiRes"] = fileHiRes
             data["fileAnimRes"] = fileAnimRes
+            data["fileLowRes"] = fileLowRes
             data["movie"] = movie
             data["tag"] = tag
             data["originalSelectedFile"] = originalSelectedFile

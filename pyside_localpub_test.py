@@ -2,6 +2,7 @@
 import sys
 import os
 import locale
+
 from api import whAPI
 from api import whDataModels
 from wormholeAPI.whDataModels import whEnvData
@@ -45,7 +46,8 @@ class LocalPub(QWidget):
     def __init__(self,parent=None):
         super(LocalPub, self).__init__(parent)
         self.selectedFile = ""
-        self.selectedPreview = ""
+        self.selectedPreview = {'ofile':'',
+                                'tfile':''}
         self.nametype = 'name'
 
 
@@ -62,6 +64,8 @@ class LocalPub(QWidget):
         except NameError:
             uic.loadUi(uipath, self)
         self.setinfo()
+        self.pdatatype_cb.addItems(gotListOfDataType)
+        # self.pdatatype_cb.setStyleSheet(QComboBox{})
 
         # download useriamge
         imageWh = Whimage(self)
@@ -95,7 +99,8 @@ class LocalPub(QWidget):
         self.tableWidget.resizeRowsToContents()
         self.setFixedHeight(800)
 
-        # project pub path rool
+        # set version
+        self.versionV_lb.setText(self.env.VersionNumber)
 
 
 
@@ -164,6 +169,7 @@ class LocalPub(QWidget):
 
     def selpreview(self):
         file = QtGui.QFileDialog.getOpenFileName(self, 'Select File', '.')
+
         filename = os.path.basename(unicode(file))
         if not filename == '':
             name = "<img src='./image/attach-file.png' >  "+filename
@@ -176,13 +182,15 @@ class LocalPub(QWidget):
             self.previewfile.setToolTip(targetpath)
 
             self.preview_VLayout.addWidget(self.previewfile)
-        self.selectedPreview = file
+        self.selectedPreview['ofile'] = file
+        self.selectedPreview['tfile'] = targetpath
+        # self.selectedPreview = file
         self.preview_VLayout.setContentsMargins(30,0,0,0)
 
 
 
     def attach(self):
-        self.dialog = QtGui.QFileDialog(self,'Title', ".")
+        self.dialog = QtGui.QFileDialog(self,'Title', u"D:\\WH_Local\\test5\\sequence_001\\shot002\\设计")
         self.dialog.setOption(self.dialog.DontUseNativeDialog, True)
         self.dialog.setFileMode(self.dialog.ExistingFiles)
         btns = self.dialog.findChildren(QtGui.QPushButton)
@@ -191,52 +199,42 @@ class LocalPub(QWidget):
         # self.dialog.openBtn.clicked.connect(self.openClicked)
         self.dialog.openBtn.clicked.connect(self.dialog.hide)
         self.dialog.tree = self.dialog.findChild(QtGui.QTreeView)
+        self.selectedFiles = []
         if self.dialog.exec_():
             inds = self.dialog.tree.selectionModel().selectedIndexes()
             files = []
             for i in inds:
-                print str(i.data().toString())
+                # print str(i.data().toString())
                 if i.column() == 0:
-                    files.append(os.path.join(str(self.dialog.directory().absolutePath()), str(i.data().toString())))
+                    # files.append(os.path.join(str(self.dialog.directory().absolutePath()), str(i.data().toString())))
+                    filepath = os.path.join(unicode(self.dialog.directory().absolutePath()), unicode(i.data().toString()))
+                    files.append(unicode(os.path.normpath(filepath)))
+                    self.selectedFiles.append(unicode(filepath))
             self.dialog.selectedFiles = files
-        # print self.selectedFiles
-
-            # self.hide()
-        #
-        # file_path = QtGui.QFileDialog.getSaveFileName(self, 'Title', "d:\\temp", "", "",
-        #                                               QtGui.QFileDialog.DontUseNativeDialog)
         self.selfiles =  self.dialog.selectedFiles()
         self.settablewidget()
 
     def settablewidget(self):
         i = self.tableWidget.rowCount()
+
         self.tableWidget.setRowCount(self.tableWidget.rowCount()+self.selfiles.count())
         for file in self.selfiles:
-
+            file = unicode(file)
             if os.path.isfile(file):
-                file = str(file)
-                target = file.replace(os.path.dirname(file), self.gettargetpath())
-
+                target = os.path.normpath(file.replace(os.path.dirname(file), self.gettargetpath()))
                 self.tableWidget.setItem(i, 0, QtGui.QTableWidgetItem(unicode(file)))
                 self.tableWidget.setItem(i, 1, QtGui.QTableWidgetItem(unicode(target)))
                 self.tableWidget.setItem(i, 2, QtGui.QTableWidgetItem(unicode('file')))
 
             elif os.path.isdir(file):
-                dir = str(file)
+                dir = unicode(file)
                 target = os.path.join(self.gettargetpath(), os.path.basename(dir))
-
                 self.tableWidget.setItem(i, 0, QtGui.QTableWidgetItem(unicode(dir)))
                 self.tableWidget.setItem(i, 1, QtGui.QTableWidgetItem(unicode(target)))
                 self.tableWidget.setItem(i, 2, QtGui.QTableWidgetItem(unicode('directory')))
             i+=1
         self.tableWidget.resizeColumnsToContents()
         self.tableWidget.resizeRowsToContents()
-        # print self.tableWidget.setRowCount()
-    # def openClicked(self):
-    #
-    #
-    #     self.dialog.hide()
-
 
     def selfile(self):
         filenames = QtGui.QFileDialog.getOpenFileNames(self, 'Select Files', '.')
@@ -264,7 +262,80 @@ class LocalPub(QWidget):
 
 
     def send(self):
-        pass
+        pubfile = unicode(self.selectedFile)
+        opubfile = ''
+        # pub files copy
+        extrafiles = []
+        for i in range(self.tableWidget.rowCount()):
+            if self.tableWidget.item(i,2).text() == 'file':
+                tfile = unicode(self.tableWidget.item(i,1).text())
+                ofile = unicode(self.tableWidget.item(i,0).text())
+                if ofile == pubfile:
+                    opubfile = ofile
+
+
+                    # self.copy(ofile,tfile)
+            elif self.tableWidget.item(i,2).text() == 'directory':
+                odir = self.tableWidget.item(i,0).text()
+                tdir = self.tableWidget.item(i,1).text()
+                # self.dircopy(odir,tdir)
+
+        # movie file copy
+        omovie = self.selectedPreview['ofile']
+        tmovie = self.selectedPreview['tfile']
+        # self.copy(omovie,tmovie)
+
+        comments =  unicode(self.textEdit.toPlainText())
+
+        self.whUpdate = whAPI.Post(self.env.Company,self.env.ServerName)
+        data = {}
+        data["projectId"] = self.env.Project
+        data["versionNumber"] = self.env.VersionNumber
+        data["publisherId"] = self.env.UserID
+        data["taskTypeCd"] = self.env.TaskTypeCode
+        data["movie"] = tmovie
+        data["originalSelectedFile"] = opubfile
+        data["originalSelectedMovie"] = omovie
+        data["publishComment"] = comments
+
+        if self.env.DirType == 'shot':
+            data["shotId"] = self.env.ShotId
+            data["file"] = pubfile
+            data["PdataType"] = unicode(self.pdatatype_cb.currentText())
+            self.whUpdate.publishShot(data=data,dictype=True)
+
+        elif self.env.DirType == 'asset':
+            data["assetId"] = self.env.AssetPrefix
+            data["filePublish"] = pubfile
+            data["PdataType"] = PdataType
+            self.whUpdate.publishAsset(data=data, dictype=True)
+
+
+    def copyfileobj(self, fsrc, fdst, path, length=10485760):
+        """copy data from file-like object fsrc to file-like object fdst"""
+        buffersize = 0
+        filesize = os.path.getsize(path)
+        self.progressBar.setValue(0)
+        QApplication.processEvents()
+
+        try:
+
+            while 1:
+                buf = fsrc.read(length)
+                if not buf:
+                    break
+                buffersize += length
+
+                fdst.write(buf)
+                if filesize > buffersize:
+                    self.progressBar.setValue(int(float(buffersize) / float(filesize) * 100))
+                    QApplication.processEvents()
+            fsrc.close()
+            fdst.close()
+            self.progressBar.setValue(100)
+        except:
+            fsrc.close()
+            fdst.close()
 
 class ResultUI(QWidget):
     def __init__(self, parent=None):
@@ -287,7 +358,7 @@ class MainWindow(QMainWindow):
         self.pubtool = LocalPub(self)
         self.setWindowTitle("Local Publish Tool")
         self.setCentralWidget(self.pubtool)
-        self.pubtool.send_btn.clicked.connect(self.resultUI)
+        self.pubtool.path_setting_btn.clicked.connect(self.resultUI)
         self.show()
 
     def resultUI(self):

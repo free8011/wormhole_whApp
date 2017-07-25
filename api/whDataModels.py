@@ -14,6 +14,7 @@ class WormholeData:
 
     def gettaskinfo(self):
         shotname = u''
+
         projName  =self.wh.getInfo(projectId=self.env.Project,getType='proj')['projectName']
 
         for seqs in self.wh.Seqnames(projectId=self.env.Project)['sequenceList']:
@@ -25,6 +26,9 @@ class WormholeData:
         for users in self.wh.ProjectUsers(projectId=self.env.Project)['UserList']:
             if users['userId'] == self.env.UserID:
                 username = unicode(users['userName'])
+        # for tasktype in self.wh.TaskTypeList()['taskTypeList']:
+        #     if tasktype['code'] == self.env.TaskTypeCode:
+        #         tasktypename = unicode(tasktype['name'])
 
         if self.env.DirType == 'shot':
             self.env.__setattr__('SeqId',self.env.SeqName)
@@ -37,21 +41,22 @@ class WormholeData:
         self.env.__setattr__('OS',oscheck.getOSType)
         self.env.__setattr__('WhAppPath',oscheck.whAppPath)
         self.env.__setattr__('UserName',username)
+        version = float(self.wh.MovAbsNumber(projectId=self.env.Project, type=self.env.DirType,assetId=self.env.AssetPrefix,shotId=self.env.ShotId)['retNumber'])+1.0
+        self.env.__setattr__('VersionNumber',unicode(version))
 
         return self.env
 
-    def ProjectFilePath(self, nametype='id'):
-        # pprint(self.wh.MovAbsNumber(projectId=self.env.Project, type=self.env.DirType,assetId=self.env.AssetPrefix,shotId=self.env.ShotId)['retNumber'])
-        version = float(self.wh.MovAbsNumber(projectId=self.env.Project, type=self.env.DirType,assetId=self.env.AssetPrefix,shotId=self.env.ShotId)['retNumber'])+1.0
+    def ProjectFilePath(self,nametype = 'id'):
         self.pathmap = {'[FILESERVERHOME]': self.env.ProjectHome, '[COMPANY]': self.env.Company,
                         '[PROJECTID]': self.env.ProjectName, '[ASSETID]': self.env.AssetPrefix,
-                        '[SEQUENCEID]': self.env.SeqId, '[SHOTID]': self.env.ShotId, '[VERSIONNUMBER]':str(version),'[PDATATYPE]':'IMAGE'}
+                        '[SEQUENCEID]': self.env.SeqId, '[SHOTID]': self.env.ShotId,
+                        '[VERSIONNUMBER]':self.env.VersionNumber,'[PDATATYPE]':'IMAGE',
+                        '[TASKTYPEID]':self.env.TaskType}
         if nametype == 'name':
             self.pathmap['[PROJECTID]']=self.env.ProjectName
             self.pathmap['[ASSETID]'] = self.env.AssetName
             self.pathmap['[SEQUENCEID]'] = self.env.SeqName
             self.pathmap['[SHOTID]'] = self.env.ShotName
-
 
 
         ProjectFilePath = self.wh.ProjectFilePath(projectId=self.env.Project)['fixedPath']
