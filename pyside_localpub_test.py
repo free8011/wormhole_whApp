@@ -2,6 +2,7 @@
 import sys
 import os
 import locale
+import shutil
 
 from api import whAPI
 from api import whDataModels
@@ -45,6 +46,9 @@ gotListOfDataType = ['singleimage', 'sequenceimage', 'modeldata', 'script', 'pho
 class LocalPub(QWidget):
     def __init__(self,parent=None):
         super(LocalPub, self).__init__(parent)
+        self.Column_originFile = 0
+        self.Column_targetFile = 1
+        self.Column_type = 2
         self.selectedFile = ""
         self.selectedPreview = {'ofile':'',
                                 'tfile':''}
@@ -52,13 +56,13 @@ class LocalPub(QWidget):
 
 
         self.whcom = whCompany()
-        self.envs = whEnvData('./wormHole_shot.env')
+        self.envs = whEnvData('./wormHole.env')
         # self.env = gettaskinfo(self.envs)
         self.whdatas = whDataModels.WormholeData(self.envs)
         self.env = self.whdatas.gettaskinfo()
         # self.projectPubPaths = self.whdatas.ProjectFilePath()
 
-        uipath = './ui/localpubtool.ui'
+        uipath = '%s/ui/localpubtool.ui'%self.env.WhAppPath
         try:
             pyside_uicfix.loadUi(uipath, self)
         except NameError:
@@ -71,7 +75,7 @@ class LocalPub(QWidget):
         imageWh = Whimage(self)
         userimage = imageWh.getUserThumbnail(host=self.env.ServerName,corpPrefix=self.env.Company, rootdir=self.env.SysUserHome,userId=self.env.UserID)
         outputimage = os.path.join(os.path.dirname(userimage),'circular',os.path.split(userimage)[1])
-        maskimage = "./image/mask.png"
+        maskimage = "%s/image/mask.png"%self.env.WhAppPath
         imageWh.circular(ofile=userimage, output=outputimage, mask=maskimage)
         pixmap = QtGui.QPixmap(outputimage)
         self.userIcon.setPixmap(pixmap)
@@ -82,7 +86,8 @@ class LocalPub(QWidget):
         pixmap2 = QtGui.QPixmap(taskthumbnail)
         self.label_2.setPixmap(pixmap2)
 
-        self.listwidget = QtGui.QListWidget()
+        self.progressBar = QtGui.QProgressBar(self)
+
         self.previewfile = QtGui.QLabel()
         self.previewfile.setTextFormat(QtCore.Qt.RichText)
 
@@ -92,29 +97,59 @@ class LocalPub(QWidget):
 
         # tableWidget
         self.tableWidget.setColumnCount(3)
-        column_headers = [u'선택한 파일', u'복사 위치', u'Type']
-        self.tableWidget.setHorizontalHeaderLabels(column_headers)
-
-        self.tableWidget.resizeColumnsToContents()
-        self.tableWidget.resizeRowsToContents()
         self.setFixedHeight(800)
 
         # set version
         self.versionV_lb.setText(self.env.VersionNumber)
 
-
-
-
-
         # button signal
         self.attach_btn.clicked.connect(self.attach)
-        self.review_btn.clicked.connect(self.selpreview)
-        # self.attachdir_btn.clicked.connect(self.seldir)
+        self.preview_btn.clicked.connect(self.selpreview)
         self.send_btn.clicked.connect(self.send)
 
-        # test
-        # self.test = QtGui.QTableWidget()
         self.tableWidget.itemSelectionChanged.connect(self.setpubFile)
+        self.pdatatype_cb.currentIndexChanged.connect(self.setTargetPath)
+        self.pdatatype_cb.editTextChanged.connect(self.setTargetPath)
+        self.path_setting_btn.clicked.connect(self.reTargetpath)
+
+        self.setMenuText()
+    def reTargetpath(self):
+        self.uis = EditDirPathUI(self)
+
+        self.uis.setGeometry(0,0,self.width(),self.height())
+        self.uis.ok_btn2.clicked.connect(self.resetTargetPath)
+        self.uis.show()
+
+
+
+    def setMenuText(self):
+        column_headers = [u'已选文件', u'发送文件位置', u'文件类型']
+        # column_headers = [u'선택한 파일', u'복사 위치', u'Type']
+        # column_headers = [u'선택한 파일', u'복사 위치', u'Type']
+        self.tableWidget.setHorizontalHeaderLabels(column_headers)
+
+        self.tableWidget.resizeColumnsToContents()
+        self.tableWidget.resizeRowsToContents()
+
+        self.attach_btn.setText(u'+ 添加附件')
+        self.path_setting_btn.setText(u'路径设置')
+        self.send_btn.setText(u'文件上传')
+        self.preview_btn.setText(u'+ 添加预览附件')
+        self.comments_lb.setText(u'评论')
+        self.projId_lb.setText(u'项目ID')
+        self.projNm_lb.setText(u'项目名称')
+        self.assetId_lb.setText(u'资产ID')
+        self.assetNm_lb.setText(u'资产名称')
+        self.seqId_lb.setText(u'场次ID')
+        self.seqNm_lb.setText(u'场次名称')
+        self.shotId_lb.setText(u'镜头ID')
+        self.shotNm_lb.setText(u'镜头名称')
+        self.Version_lb.setText(u'上传版本')
+        self.taskType_lb.setText(u'任务类型')
+        self.UserNm_lb.setText(u'用户名称')
+        self.UserId_lb.setText(u'用户ID')
+
+
 
     def setpubFile(self):
         original,target,type = self.tableWidget.selectedIndexes()
@@ -153,19 +188,29 @@ class LocalPub(QWidget):
 
 
 
-    def gettargetpath(self):
+    def gettargetpath(self,pathtype = 'file'):
+        '''
+
+        :param pathtype: 'file' or 'preview'. default value : 'file'
+        :return:
+        '''
         # data = {'[VERSIONNUMBER]':'10','[PDATATYPE]':'IMAGE'}
-        paths = self.whdatas.ProjectFilePath(nametype=self.nametype)
+        paths = self.whdatas.ProjectFilePath(nametype=self.nametype,
+                                             pdatatype=unicode(self.pdatatype_cb.currentText()))
+        # pprint(paths)
         if self.env.DirType == 'shot':
             targetpath = paths['fixShotPubPath']
+            targetpreview = paths['fixShotMovPath']
         elif self.env.DirType == 'asset':
             targetpath = paths['fixAssetPubPath']
+            targetpreview = paths['fixAssetMovPath']
         # targetpath = u"C:\\Users\\simo\\Pictures\\pubtest임"
-        return targetpath
+        # pprint(paths)
+        if pathtype == 'file':
+            return targetpath
+        elif pathtype == 'preview':
+            return targetpreview
 
-    def getpreviewtargetpath(self):
-        previewtargetpath =u"C:\\Users\\simo\\Pictures\\pubtest임"
-        return previewtargetpath
 
     def selpreview(self):
         file = QtGui.QFileDialog.getOpenFileName(self, 'Select File', '.')
@@ -176,8 +221,9 @@ class LocalPub(QWidget):
             self.previewpath = filename
             self.previewfile.setText(QtCore.QString(unicode(name)))
             self.previewfile.setAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignTop)
-
-            targetpath = os.path.join(self.getpreviewtargetpath(), filename)
+            name,ext = os.path.splitext(filename)
+            filename = '%s_%05d%s'%(name,int(self.env.MovAbsNumber),ext)
+            targetpath = os.path.join(unicode(self.gettargetpath('preview')), unicode(filename))
             self.previewfile.setStatusTip(targetpath)
             self.previewfile.setToolTip(targetpath)
 
@@ -190,29 +236,32 @@ class LocalPub(QWidget):
 
 
     def attach(self):
-        self.dialog = QtGui.QFileDialog(self,'Title', u"D:\\WH_Local\\test5\\sequence_001\\shot002\\设计")
+        self.selfiles = None
+        self.dialog = QtGui.QFileDialog(self,'Title', u".")
         self.dialog.setOption(self.dialog.DontUseNativeDialog, True)
         self.dialog.setFileMode(self.dialog.ExistingFiles)
         btns = self.dialog.findChildren(QtGui.QPushButton)
         self.dialog.openBtn = [x for x in btns if 'open' in str(x.text()).lower()][0]
         self.dialog.openBtn.clicked.disconnect()
-        # self.dialog.openBtn.clicked.connect(self.openClicked)
         self.dialog.openBtn.clicked.connect(self.dialog.hide)
         self.dialog.tree = self.dialog.findChild(QtGui.QTreeView)
-        self.selectedFiles = []
+        self.selectedFiles2 = []
+        self.dialog.tree.doubleClicked.connect(self.test)
         if self.dialog.exec_():
             inds = self.dialog.tree.selectionModel().selectedIndexes()
             files = []
             for i in inds:
                 # print str(i.data().toString())
                 if i.column() == 0:
-                    # files.append(os.path.join(str(self.dialog.directory().absolutePath()), str(i.data().toString())))
                     filepath = os.path.join(unicode(self.dialog.directory().absolutePath()), unicode(i.data().toString()))
                     files.append(unicode(os.path.normpath(filepath)))
-                    self.selectedFiles.append(unicode(filepath))
+                    self.selectedFiles2.append(unicode(filepath))
             self.dialog.selectedFiles = files
         self.selfiles =  self.dialog.selectedFiles()
         self.settablewidget()
+    def test(self,index):
+        item = self.dialog.selectedIndexes()[0]
+        print item.model().itemFromIndex(index).text()
 
     def settablewidget(self):
         i = self.tableWidget.rowCount()
@@ -236,96 +285,141 @@ class LocalPub(QWidget):
         self.tableWidget.resizeColumnsToContents()
         self.tableWidget.resizeRowsToContents()
 
-    def selfile(self):
-        filenames = QtGui.QFileDialog.getOpenFileNames(self, 'Select Files', '.')
-        # print len(filenames)
-        # print filenames
-        self.tableWidget.setRowCount(len(filenames))
-        i=0
-        for files in filenames:
-            if os.path.isfile(files):
-                file = str(files)
-                target = file.replace(os.path.dirname(file), self.gettargetpath())
-                oitem = QtGui.QTableWidgetItem(file)
-                titem = QtGui.QTableWidgetItem(target)
-                pathtype = QtGui.QTableWidgetItem(unicode('file'))
+    def setTargetPath(self):
 
-                # self.tableWidget.insertRow(i)
-                self.tableWidget.setItem(i, 0, oitem)
-                self.tableWidget.setItem(i, 1, titem)
-                self.tableWidget.setItem(i, 2, pathtype)
-                # print i, ':::' ,oitem, '    --->   ', titem, ' : ',pathtype
-                i += 1
+        for i in range(self.tableWidget.rowCount()):
+            if self.tableWidget.item(i, self.Column_type).text() == 'file':
+                ofile = unicode(self.tableWidget.item(i, self.Column_originFile).text())
+                target = os.path.normpath(ofile.replace(os.path.dirname(ofile), self.gettargetpath()))
+                self.tableWidget.setItem(i, self.Column_targetFile, QtGui.QTableWidgetItem(unicode(target)))
 
+            elif self.tableWidget.item(i, self.Column_type).text() == 'directory':
+                odir = unicode(self.tableWidget.item(i, self.Column_originFile).text())
+                target = os.path.join(self.gettargetpath(), os.path.basename(odir))
+                self.tableWidget.setItem(i, self.Column_targetFile, QtGui.QTableWidgetItem(unicode(target)))
+            i += 1
         self.tableWidget.resizeColumnsToContents()
         self.tableWidget.resizeRowsToContents()
 
+    def resetTargetPath(self):
+        tpreviewpath = self.selectedPreview['tfile'].replace(
+            os.path.dirname(unicode(self.selectedPreview['tfile'])),
+            unicode(self.uis.tpreviewpath))
+
+        self.previewfile.setStatusTip(tpreviewpath)
+        self.previewfile.setToolTip(tpreviewpath)
+        self.selectedPreview['tfile'] = tpreviewpath
+
+        tpubpath = unicode(self.uis.tpubpath)
+
+        for i in range(self.tableWidget.rowCount()):
+            if self.tableWidget.item(i, self.Column_type).text() == 'file':
+                otfile = unicode(self.tableWidget.item(i, self.Column_targetFile).text())
+                target = os.path.normpath(otfile.replace(os.path.dirname(otfile), tpubpath))
+
+                self.tableWidget.setItem(i, self.Column_targetFile, QtGui.QTableWidgetItem(unicode(target)))
+
+            elif self.tableWidget.item(i, self.Column_type).text() == 'directory':
+                otdir = unicode(self.tableWidget.item(i, self.Column_targetFile).text())
+                target = os.path.join(tpubpath, os.path.basename(otdir))
+
+                self.tableWidget.setItem(i, self.Column_targetFile, QtGui.QTableWidgetItem(unicode(target)))
+            i += 1
+        self.tableWidget.resizeColumnsToContents()
+        self.tableWidget.resizeRowsToContents()
+
+
+        self.uis.close()
 
     def send(self):
         pubfile = unicode(self.selectedFile)
         opubfile = ''
         # pub files copy
         extrafiles = []
-        for i in range(self.tableWidget.rowCount()):
-            if self.tableWidget.item(i,2).text() == 'file':
-                tfile = unicode(self.tableWidget.item(i,1).text())
-                ofile = unicode(self.tableWidget.item(i,0).text())
-                if ofile == pubfile:
-                    opubfile = ofile
+        if pubfile == '':
+            reply = QtGui.QMessageBox.question(self, 'Message',
+                                               "please select one file", QtGui.QMessageBox.Ok ,
+                                               QtGui.QMessageBox.Ok)
+
+            if reply == QtGui.QMessageBox.Yes:
+                print 'yes'
+            else:
+                print 'no'
+        else:
+            for i in range(self.tableWidget.rowCount()):
+                if self.tableWidget.item(i,self.Column_type).text() == 'file':
+                    ofile = unicode(self.tableWidget.item(i,self.Column_originFile).text())
+                    tfile = unicode(self.tableWidget.item(i,self.Column_targetFile).text())
+                    self.copyfileobj(unicode(ofile), unicode(tfile))
+                    if ofile == pubfile:
+                        opubfile = ofile
+                elif self.tableWidget.item(i,self.Column_type).text() == 'directory':
+                    odir = self.tableWidget.item(i,self.Column_originFile).text()
+                    tdir = self.tableWidget.item(i,self.Column_targetFile).text()
+                    self.copytree(unicode(odir),unicode(tdir))
+
+            # movie file copy
+            omovie = self.selectedPreview['ofile']
+            tmovie = self.selectedPreview['tfile']
+            self.copyfileobj(unicode(omovie),unicode(tmovie))
+
+            comments =  unicode(self.textEdit.toPlainText())
+
+            self.whUpdate = whAPI.Post(self.env.Company,self.env.ServerName)
+            data = {}
+            data["projectId"] = self.env.Project
+            data["versionNumber"] = self.env.VersionNumber
+            data["publisherId"] = self.env.UserID
+            data["taskTypeCd"] = self.env.TaskTypeCode
+            data["movie"] = tmovie
+            data["originalSelectedFile"] = opubfile
+            data["originalSelectedMovie"] = omovie
+            data["publishComment"] = comments
+
+            if self.env.DirType == 'shot':
+                data["shotId"] = self.env.ShotId
+                data["file"] = pubfile
+                data["PdataType"] = unicode(self.pdatatype_cb.currentText())
+                self.whUpdate.publishShot(data=data,dictype=True)
+
+            elif self.env.DirType == 'asset':
+                data["assetId"] = self.env.AssetPrefix
+                data["filePublish"] = pubfile
+                data["PdataType"] = unicode(self.pdatatype_cb.currentText())
+                self.whUpdate.publishAsset(data=data, dictype=True)
+
+            self.parent().closed()
 
 
-                    # self.copy(ofile,tfile)
-            elif self.tableWidget.item(i,2).text() == 'directory':
-                odir = self.tableWidget.item(i,0).text()
-                tdir = self.tableWidget.item(i,1).text()
-                # self.dircopy(odir,tdir)
+    def copyfileobj(self, source, target,  length=10485760):
+        '''
 
-        # movie file copy
-        omovie = self.selectedPreview['ofile']
-        tmovie = self.selectedPreview['tfile']
-        # self.copy(omovie,tmovie)
-
-        comments =  unicode(self.textEdit.toPlainText())
-
-        self.whUpdate = whAPI.Post(self.env.Company,self.env.ServerName)
-        data = {}
-        data["projectId"] = self.env.Project
-        data["versionNumber"] = self.env.VersionNumber
-        data["publisherId"] = self.env.UserID
-        data["taskTypeCd"] = self.env.TaskTypeCode
-        data["movie"] = tmovie
-        data["originalSelectedFile"] = opubfile
-        data["originalSelectedMovie"] = omovie
-        data["publishComment"] = comments
-
-        if self.env.DirType == 'shot':
-            data["shotId"] = self.env.ShotId
-            data["file"] = pubfile
-            data["PdataType"] = unicode(self.pdatatype_cb.currentText())
-            self.whUpdate.publishShot(data=data,dictype=True)
-
-        elif self.env.DirType == 'asset':
-            data["assetId"] = self.env.AssetPrefix
-            data["filePublish"] = pubfile
-            data["PdataType"] = PdataType
-            self.whUpdate.publishAsset(data=data, dictype=True)
-
-
-    def copyfileobj(self, fsrc, fdst, path, length=10485760):
+        :param fsrc: file(sourceFile,'rb')
+        :param fdst: file(targetFile,'wb')
+        :param path: sourceFile
+        :param length:
+        :return:
+        '''
         """copy data from file-like object fsrc to file-like object fdst"""
+        if not os.path.exists(os.path.dirname(target)):
+            os.makedirs(unicode(os.path.dirname(target)))
+        fsrc = file(source,'rb')
+        fdst = file(target,'wb')
         buffersize = 0
-        filesize = os.path.getsize(path)
+        filesize = os.path.getsize(source)
+        # self.progressBar = QtGui.QProgressBar(self)
+        self.progressBar.show()
+
+        self.progressBar.setGeometry(self.width()/5,self.height()/3,self.width()/2,self.height()/15)
         self.progressBar.setValue(0)
         QApplication.processEvents()
 
         try:
-
             while 1:
                 buf = fsrc.read(length)
                 if not buf:
                     break
                 buffersize += length
-
                 fdst.write(buf)
                 if filesize > buffersize:
                     self.progressBar.setValue(int(float(buffersize) / float(filesize) * 100))
@@ -336,21 +430,83 @@ class LocalPub(QWidget):
         except:
             fsrc.close()
             fdst.close()
+        self.progressBar.hide()
 
-class ResultUI(QWidget):
+    def copytree(self, src, dst, symlinks=False, ignore=None):
+        names = os.listdir(src)
+        if ignore is not None:
+            ignored_names = ignore(src, names)
+        else:
+            ignored_names = set()
+        if not os.path.exists(dst):
+            os.makedirs(dst)
+        errors = []
+        for name in names:
+            if name in ignored_names:
+                continue
+            srcname = os.path.join(src, name)
+            dstname = os.path.join(dst, name)
+            try:
+                if symlinks and os.path.islink(srcname):
+                    linkto = os.readlink(srcname)
+                    os.symlink(linkto, dstname)
+                elif os.path.isdir(srcname):
+                    self.copytree(srcname, dstname, symlinks, ignore)
+                else:
+                    shutil.copy2(srcname, dstname)
+                # XXX What about devices, sockets etc.?
+            except (IOError, os.error) as why:
+                errors.append((srcname, dstname, str(why)))
+            # catch the Error from the recursive copytree so that we can
+            # continue with other files
+
+        try:
+            shutil.copystat(src, dst)
+        except WindowsError:
+            # can't copy file access times on Windows
+            pass
+        except OSError as why:
+            errors.extend((src, dst, str(why)))
+
+class EditDirPathUI(QWidget):
     def __init__(self, parent=None):
-        super(ResultUI, self).__init__(parent)
-
-        uipath = './ui/replacePath.ui'
+        super(EditDirPathUI, self).__init__(parent)
+        self.tpreviewpath = ''
+        self.tpubpath = ''
+        uipath = '%s/ui/replacePath.ui'%self.parent().env.WhAppPath
         # print uipath
         try:
             pyside_uicfix.loadUi(uipath, self)
         except NameError:
             uic.loadUi(uipath, self)
+        self.preview_btn2.clicked.connect(self.getpreviewpath)
+        self.pub_btn2.clicked.connect(self.getpubpath)
+        self.cancle_btn2.clicked.connect(self.close)
+
+
+
+    def getpreviewpath(self):
+        # dir = QtGui.QFileDialog.DirectoryOnly(self, 'Select Directory', '.')
+        self.tpreviewpath = unicode(QtGui.QFileDialog.getExistingDirectory(self, 'selectDirectory','.'))
+        self.preview_le2.setText(self.tpreviewpath)
+
+
+    def getpubpath(self):
+        # dir = QtGui.QFileDialog.DirectoryOnly(self, 'Select Directory', '.')
+        self.tpubpath = unicode(QtGui.QFileDialog.getExistingDirectory(self, 'selectDirectory','.'))
+        self.pub_le2.setText(self.tpubpath)
+
+
+
+
+
+
 
 class MainWindow(QMainWindow):
     def __init__(self, parent=None):
         super(MainWindow, self).__init__(parent)
+        app_icon = QtGui.QIcon('WH_Icon16.png')
+        self.setWindowIcon(app_icon)
         self.start()
 
     def start(self):
@@ -358,17 +514,25 @@ class MainWindow(QMainWindow):
         self.pubtool = LocalPub(self)
         self.setWindowTitle("Local Publish Tool")
         self.setCentralWidget(self.pubtool)
-        self.pubtool.path_setting_btn.clicked.connect(self.resultUI)
+        # self.pubtool.path_setting_btn.clicked.connect(self.resultUI)
         self.show()
 
-    def resultUI(self):
+    def editdirpathUI(self):
         self.resize(1058, 295)
-        self.resultui = ResultUI(self)
-        self.setCentralWidget(self.resultui)
+        self.edp = EditDirPathUI(self)
+        self.setCentralWidget(self.edp)
         self.setWindowTitle("Check target path")
+        self.edp.ok_btn2.clicked.connect(self.pubtool)
         self.show()
-        # print self.pubtool.selectedFile
-        # print 'count = ',self.pubtool.listwidget.count()
+    # def resultUI(self):
+    #     self.resize(1058, 295)
+    #     self.resultui = ResultUI(self)
+    #     self.setCentralWidget(self.resultui)
+    #     self.setWindowTitle("Check target path")
+    #     self.show()
+
+    def closed(self):
+        self.close()
 
 
 if __name__ == '__main__':

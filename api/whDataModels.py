@@ -16,20 +16,21 @@ class WormholeData:
         shotname = u''
 
         projName  =self.wh.getInfo(projectId=self.env.Project,getType='proj')['projectName']
-
-        for seqs in self.wh.Seqnames(projectId=self.env.Project)['sequenceList']:
-            if seqs['sequenceId'] == self.env.SeqName:
-                seqname = unicode(seqs['sequenceNm'])
-        for shots in (self.wh.ShotNames(projectId=self.env.Project,seqId=self.env.SeqName)['shotList']):
-            if shots['shotId'] == self.env.ShotName:
-                shotname = unicode(shots['shotNm'])
+        if self.env.DirType == 'shot':
+            for seqs in self.wh.Seqnames(projectId=self.env.Project)['sequenceList']:
+                if seqs['sequenceId'] == self.env.SeqName:
+                    seqname = unicode(seqs['sequenceNm'])
+            for shots in (self.wh.ShotNames(projectId=self.env.Project,seqId=self.env.SeqName)['shotList']):
+                if shots['shotId'] == self.env.ShotName:
+                    shotname = unicode(shots['shotNm'])
         for users in self.wh.ProjectUsers(projectId=self.env.Project)['UserList']:
             if users['userId'] == self.env.UserID:
                 username = unicode(users['userName'])
         # for tasktype in self.wh.TaskTypeList()['taskTypeList']:
         #     if tasktype['code'] == self.env.TaskTypeCode:
         #         tasktypename = unicode(tasktype['name'])
-
+        self.env.__setattr__('SeqId','')
+        self.env.__setattr__('ShotId','')
         if self.env.DirType == 'shot':
             self.env.__setattr__('SeqId',self.env.SeqName)
             self.env.__setattr__('SeqName',seqname)
@@ -42,15 +43,17 @@ class WormholeData:
         self.env.__setattr__('WhAppPath',oscheck.whAppPath)
         self.env.__setattr__('UserName',username)
         version = float(self.wh.MovAbsNumber(projectId=self.env.Project, type=self.env.DirType,assetId=self.env.AssetPrefix,shotId=self.env.ShotId)['retNumber'])+1.0
+        absnumber = int(self.wh.MovAbsNumber(projectId=self.env.Project, type='movie',assetId=self.env.AssetPrefix,shotId=self.env.ShotId)['retNumber'])
         self.env.__setattr__('VersionNumber',unicode(version))
+        self.env.__setattr__('MovAbsNumber', unicode(absnumber))
 
         return self.env
 
-    def ProjectFilePath(self,nametype = 'id'):
+    def ProjectFilePath(self,nametype = 'id',pdatatype=''):
         self.pathmap = {'[FILESERVERHOME]': self.env.ProjectHome, '[COMPANY]': self.env.Company,
                         '[PROJECTID]': self.env.ProjectName, '[ASSETID]': self.env.AssetPrefix,
                         '[SEQUENCEID]': self.env.SeqId, '[SHOTID]': self.env.ShotId,
-                        '[VERSIONNUMBER]':self.env.VersionNumber,'[PDATATYPE]':'IMAGE',
+                        '[VERSIONNUMBER]':self.env.VersionNumber,'[PDATATYPE]':pdatatype,
                         '[TASKTYPEID]':self.env.TaskType}
         if nametype == 'name':
             self.pathmap['[PROJECTID]']=self.env.ProjectName
@@ -70,12 +73,6 @@ class WormholeData:
             self.projFilePath[k] = os.path.normpath(paths)
 
         return self.projFilePath
-
-
-
-
-
-
 
 
         # if self.env.DirType == 'shot':

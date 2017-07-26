@@ -3,7 +3,10 @@ import os
 import sys
 import urllib
 import urlparse
-from PIL import Image, ImageOps
+import Image , ImageOps
+
+# from PIL import Image
+# from PIL import Image, ImageOps
 from api import whAPI
 reload(sys)
 sys.setdefaultencoding('utf-8')
@@ -44,7 +47,7 @@ class Whimage:
         if env.DirType == 'shot':
             rootpath = os.path.join(env.SysUserHome, env.Company, env.Project,'shot_images', env.SeqId)
         elif env.DirType == 'asset':
-            rootpath = os.path.join(env.SysUrootdir, env.corpPrefix, env.Project,'asset_images')
+            rootpath = os.path.join(env.SysUserHome, env.Company, env.Project,'asset_images')
 
         if not os.path.exists(rootpath):
             os.makedirs(rootpath)

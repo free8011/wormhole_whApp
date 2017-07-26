@@ -1,0 +1,1 @@
+pyinstaller --onefile --noconsole --icon=WH_Icon256.ico --name=localPublishTool.exe pyside_localpub_test.py

@@ -134,7 +134,7 @@
            </widget>
           </item>
           <item>
-           <layout class="QHBoxLayout" name="horizontalLayout" stretch="1,2">
+           <layout class="QHBoxLayout" name="horizontalLayout" stretch="0,0">
             <property name="topMargin">
              <number>10</number>
             </property>
@@ -795,7 +795,7 @@
         </layout>
        </item>
        <item>
-        <widget class="QLabel" name="label_7">
+        <widget class="QLabel" name="comments_lb">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
            <horstretch>0</horstretch>
@@ -839,7 +839,7 @@ p, li { white-space: pre-wrap; }
        <item>
         <layout class="QHBoxLayout" name="horizontalLayout_4">
          <item>
-          <widget class="QPushButton" name="review_btn">
+          <widget class="QPushButton" name="preview_btn">
            <property name="font">
             <font>
              <pointsize>10</pointsize>
