@@ -51,7 +51,7 @@ class WormholeData:
 
     def ProjectFilePath(self,nametype = 'id',pdatatype=''):
         self.pathmap = {'[FILESERVERHOME]': self.env.ProjectHome, '[COMPANY]': self.env.Company,
-                        '[PROJECTID]': self.env.ProjectName, '[ASSETID]': self.env.AssetPrefix,
+                        '[PROJECTID]': self.env.Project, '[ASSETID]': self.env.AssetPrefix,
                         '[SEQUENCEID]': self.env.SeqId, '[SHOTID]': self.env.ShotId,
                         '[VERSIONNUMBER]':self.env.VersionNumber,'[PDATATYPE]':pdatatype,
                         '[TASKTYPEID]':self.env.TaskType}
@@ -73,9 +73,6 @@ class WormholeData:
             self.projFilePath[k] = os.path.normpath(paths)
 
         return self.projFilePath
-
-
-        # if self.env.DirType == 'shot':
 
     def ThumbnailPath(self):
 

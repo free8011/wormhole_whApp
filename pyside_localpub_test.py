@@ -14,7 +14,7 @@ try:
     from PyQt4 import QtCore, QtGui, uic
     from PyQt4.QtGui import QApplication, QMainWindow, QPushButton, QWidget
 except ImportError as a:
-    # print 'use PySide'
+    print 'use PySide'
     from PySide import QtCore, QtGui
     from PySide.QtGui import QApplication, QMainWindow, QPushButton, QWidget
     import pyside_uicfix
@@ -39,7 +39,7 @@ userpath = os.path.join(os.path.expanduser("~"), 'wormhole','presets')
 locale,unicode_locale = locale.getdefaultlocale()
 
 
-gotListOfDataType = ['singleimage', 'sequenceimage', 'modeldata', 'script', 'photoshop', 'cache', 'mocap',
+getListOfDataType = ['singleimage', 'sequenceimage', 'modeldata', 'script', 'photoshop', 'cache', 'mocap',
                              'nuke', 'modo', 'houdini', 'maya', 'AfterEffects', 'etc']
 
 
@@ -52,8 +52,7 @@ class LocalPub(QWidget):
         self.selectedFile = ""
         self.selectedPreview = {'ofile':'',
                                 'tfile':''}
-        self.nametype = 'name'
-
+        self.nametype = self.parent().Nametype
 
         self.whcom = whCompany()
         self.envs = whEnvData('./wormHole.env')
@@ -68,7 +67,7 @@ class LocalPub(QWidget):
         except NameError:
             uic.loadUi(uipath, self)
         self.setinfo()
-        self.pdatatype_cb.addItems(gotListOfDataType)
+        self.pdatatype_cb.addItems(getListOfDataType)
         # self.pdatatype_cb.setStyleSheet(QComboBox{})
 
         # download useriamge
@@ -86,7 +85,7 @@ class LocalPub(QWidget):
         pixmap2 = QtGui.QPixmap(taskthumbnail)
         self.label_2.setPixmap(pixmap2)
 
-        self.progressBar = QtGui.QProgressBar(self)
+        # self.progressBar = QtGui.QProgressBar(self)
 
         self.previewfile = QtGui.QLabel()
         self.previewfile.setTextFormat(QtCore.Qt.RichText)
@@ -112,7 +111,17 @@ class LocalPub(QWidget):
         self.pdatatype_cb.editTextChanged.connect(self.setTargetPath)
         self.path_setting_btn.clicked.connect(self.reTargetpath)
 
-        self.setMenuText()
+        # column_headers = [u'선택한 파일', u'복사 위치', u'Type']
+        column_headers = [u'selected file', u'copy path', u'Type']
+        self.tableWidget.setHorizontalHeaderLabels(column_headers)
+        self.tableWidget.resizeColumnsToContents()
+        self.tableWidget.resizeRowsToContents()
+
+        if self.parent().languageSets == 'cn':
+            self.setMenuText()
+
+
+
     def reTargetpath(self):
         self.uis = EditDirPathUI(self)
 
@@ -124,8 +133,6 @@ class LocalPub(QWidget):
 
     def setMenuText(self):
         column_headers = [u'已选文件', u'发送文件位置', u'文件类型']
-        # column_headers = [u'선택한 파일', u'복사 위치', u'Type']
-        # column_headers = [u'선택한 파일', u'복사 위치', u'Type']
         self.tableWidget.setHorizontalHeaderLabels(column_headers)
 
         self.tableWidget.resizeColumnsToContents()
@@ -148,6 +155,8 @@ class LocalPub(QWidget):
         self.taskType_lb.setText(u'任务类型')
         self.UserNm_lb.setText(u'用户名称')
         self.UserId_lb.setText(u'用户ID')
+
+
 
 
 
@@ -214,24 +223,24 @@ class LocalPub(QWidget):
 
     def selpreview(self):
         file = QtGui.QFileDialog.getOpenFileName(self, 'Select File', '.')
+        if not file =='' :
+            filename = os.path.basename(unicode(file))
+            if not filename == '':
+                name = "<img src='./image/attach-file.png' >  "+filename
+                self.previewpath = filename
+                self.previewfile.setText(QtCore.QString(unicode(name)))
+                self.previewfile.setAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignTop)
+                name,ext = os.path.splitext(filename)
+                filename = '%s_%05d%s'%(name,int(self.env.MovAbsNumber),ext)
+                targetpath = os.path.join(unicode(self.gettargetpath('preview')), unicode(filename))
+                self.previewfile.setStatusTip(targetpath)
+                self.previewfile.setToolTip(targetpath)
 
-        filename = os.path.basename(unicode(file))
-        if not filename == '':
-            name = "<img src='./image/attach-file.png' >  "+filename
-            self.previewpath = filename
-            self.previewfile.setText(QtCore.QString(unicode(name)))
-            self.previewfile.setAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignTop)
-            name,ext = os.path.splitext(filename)
-            filename = '%s_%05d%s'%(name,int(self.env.MovAbsNumber),ext)
-            targetpath = os.path.join(unicode(self.gettargetpath('preview')), unicode(filename))
-            self.previewfile.setStatusTip(targetpath)
-            self.previewfile.setToolTip(targetpath)
-
-            self.preview_VLayout.addWidget(self.previewfile)
-        self.selectedPreview['ofile'] = file
-        self.selectedPreview['tfile'] = targetpath
-        # self.selectedPreview = file
-        self.preview_VLayout.setContentsMargins(30,0,0,0)
+                self.preview_VLayout.addWidget(self.previewfile)
+            self.selectedPreview['ofile'] = file
+            self.selectedPreview['tfile'] = targetpath
+            # self.selectedPreview = file
+            self.preview_VLayout.setContentsMargins(30,0,0,0)
 
 
 
@@ -246,7 +255,7 @@ class LocalPub(QWidget):
         self.dialog.openBtn.clicked.connect(self.dialog.hide)
         self.dialog.tree = self.dialog.findChild(QtGui.QTreeView)
         self.selectedFiles2 = []
-        self.dialog.tree.doubleClicked.connect(self.test)
+        # self.dialog.tree.doubleClicked.connect(self.test)
         if self.dialog.exec_():
             inds = self.dialog.tree.selectionModel().selectedIndexes()
             files = []
@@ -259,9 +268,9 @@ class LocalPub(QWidget):
             self.dialog.selectedFiles = files
         self.selfiles =  self.dialog.selectedFiles()
         self.settablewidget()
-    def test(self,index):
-        item = self.dialog.selectedIndexes()[0]
-        print item.model().itemFromIndex(index).text()
+    # def test(self,index):
+    #     item = self.dialog.selectedIndexes()[0]
+    #     print item.model().itemFromIndex(index).text()
 
     def settablewidget(self):
         i = self.tableWidget.rowCount()
@@ -407,7 +416,7 @@ class LocalPub(QWidget):
         fdst = file(target,'wb')
         buffersize = 0
         filesize = os.path.getsize(source)
-        # self.progressBar = QtGui.QProgressBar(self)
+        self.progressBar = QtGui.QProgressBar(self)
         self.progressBar.show()
 
         self.progressBar.setGeometry(self.width()/5,self.height()/3,self.width()/2,self.height()/15)
@@ -471,6 +480,7 @@ class LocalPub(QWidget):
 class EditDirPathUI(QWidget):
     def __init__(self, parent=None):
         super(EditDirPathUI, self).__init__(parent)
+        
         self.tpreviewpath = ''
         self.tpubpath = ''
         uipath = '%s/ui/replacePath.ui'%self.parent().env.WhAppPath
@@ -483,7 +493,8 @@ class EditDirPathUI(QWidget):
         self.pub_btn2.clicked.connect(self.getpubpath)
         self.cancle_btn2.clicked.connect(self.close)
 
-
+        if self.parent().parent().languageSets == 'cn':
+            self.setMenuText()
 
     def getpreviewpath(self):
         # dir = QtGui.QFileDialog.DirectoryOnly(self, 'Select Directory', '.')
@@ -497,7 +508,12 @@ class EditDirPathUI(QWidget):
         self.pub_le2.setText(self.tpubpath)
 
 
-
+    def setMenuText(self):
+        self.parent().setWindowTitle(u'更改路径')
+        self.preview_lb2.setText(u'预览文件路径')
+        self.pub_lb2.setText(u'上传文件路径')
+        self.cancle_btn2.setText(u'取消')
+        self.ok_btn2.setText(u'确认')
 
 
 
@@ -505,14 +521,108 @@ class EditDirPathUI(QWidget):
 class MainWindow(QMainWindow):
     def __init__(self, parent=None):
         super(MainWindow, self).__init__(parent)
+
         app_icon = QtGui.QIcon('WH_Icon16.png')
         self.setWindowIcon(app_icon)
+
+
+        self.settings = QtCore.QSettings("__settings.ini", QtCore.QSettings.IniFormat)
+
+
+        menubar = self.menuBar()
+        settingmenu = menubar.addMenu("setting")
+        editmenu = menubar.addMenu('Edit')
+
+
+        self.setkeyname = QtGui.QAction(settingmenu)
+        self.setkeyname.setCheckable(True)
+        self.setkeyname.setText(_translate("MainWindow", "name", None))
+        self.setkeyname.triggered.connect(lambda: self.setNametype(name=True))
+
+        self.setkeyid = QtGui.QAction(editmenu)
+        self.setkeyid.setCheckable(True)
+        self.setkeyid.setText(_translate("MainWindow", "ID", None))
+        self.setkeyid.triggered.connect(lambda: self.setNametype(id=True))
+
+        settingmenu.addAction(self.setkeyname)
+        settingmenu.addAction(self.setkeyid)
+
+        Languagemenu = editmenu.addMenu('Language')
+
+        self.actionEnglish = QtGui.QAction(editmenu)
+        self.actionEnglish.setCheckable(True)
+        self.actionEnglish.setText(_translate("MainWindow", "English", None))
+        self.actionEnglish.triggered.connect(lambda: self.languagecheck(en=True))
+
+        self.actionChinese = QtGui.QAction(editmenu)
+        self.actionChinese.setCheckable(True)
+        self.actionChinese.setText(_translate("MainWindow", "Chinese", None))
+        self.actionChinese.triggered.connect(lambda: self.languagecheck(cn=True))
+
+        Languagemenu.addAction(self.actionEnglish)
+        Languagemenu.addAction(self.actionChinese)
+        if self.settings.value('languageSet').toString() == 'en':
+            self.languageSets = 'en'
+            self.actionEnglish.setChecked(True)
+        elif self.settings.value('languageSet').toString() == 'cn':
+            self.languageSets = 'cn'
+            self.actionChinese.setChecked(True)
+
+        self.languageSets = self.settings.value('languageSet').toString()
+
+        if self.settings.value('defaultkey').toString() == 'name':
+            self.setkeyname.setChecked(True)
+        elif self.settings.value('defaultkey').toString() == 'id':
+            self.setkeyid.setChecked(True)
+        self.Nametype = self.settings.value('defaultkey').toString()
+
         self.start()
 
+    def closeEvent(self, event):
+        if self.actionEnglish.isChecked():
+            self.settings.setValue('languageSet','en')
+        elif self.actionChinese.isChecked():
+            self.settings.setValue('languageSet','cn')
+
+        if self.setkeyname.isChecked():
+            self.settings.setValue('defaultkey','name')
+        elif self.setkeyid.isChecked():
+            self.settings.setValue('defaultkey','id')
+
+    def languagecheck(self,en=False,cn=False):
+        self.actionEnglish.setChecked(en)
+        self.actionChinese.setChecked(cn)
+        if en:
+            self.languageSets = 'en'
+            self.setWindowTitle(u"Local Publish Tool")
+        elif cn:
+            self.languageSets = 'cn'
+            self.setWindowTitle(u"发布其他文件")
+        self.pubtool.close()
+        self.start()
+
+    def setNametype(self,name=False,id=False):
+        self.setkeyname.setChecked(name)
+        self.setkeyid.setChecked(id)
+        if name:
+            self.Nametype = 'name'
+        elif id:
+            self.Nametype = 'id'
+        self.pubtool.close()
+        self.start()
+
+    def preference(self):
+        print 'preference'
+
     def start(self):
+
         self.resize(1058,800)
         self.pubtool = LocalPub(self)
-        self.setWindowTitle("Local Publish Tool")
+        if self.settings.value('languageSet').toString() == 'en':
+            self.setWindowTitle(u"Local Publish Tool")
+        elif self.settings.value('languageSet').toString() == 'cn':
+            self.setWindowTitle(u"发布其他文件")
+
         self.setCentralWidget(self.pubtool)
         # self.pubtool.path_setting_btn.clicked.connect(self.resultUI)
         self.show()
@@ -524,12 +634,7 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("Check target path")
         self.edp.ok_btn2.clicked.connect(self.pubtool)
         self.show()
-    # def resultUI(self):
-    #     self.resize(1058, 295)
-    #     self.resultui = ResultUI(self)
-    #     self.setCentralWidget(self.resultui)
-    #     self.setWindowTitle("Check target path")
-    #     self.show()
+
 
     def closed(self):
         self.close()
