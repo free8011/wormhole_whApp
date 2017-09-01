@@ -565,6 +565,7 @@ class whProjectPathData(object):
         path_map.SEQUENCEID = replaceData.SeqName
         path_map.SHOTID = replaceData.ShotName
         path_map.TASKTYPEID = replaceData.TaskType
+        # path_map.CATEGORY = replaceData.Category
 
         replaceList = [x for x in self.__dict__.keys() if '__' not in x and 'TID' not in x]
         for r in replaceList:

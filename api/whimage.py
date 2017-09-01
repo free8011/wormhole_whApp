@@ -3,11 +3,10 @@ import os
 import sys
 import urllib
 import urlparse
-import Image , ImageOps
+from PIL import Image as image
+import ImageOps
+from PyQt4 import QtGui
 
-# from PIL import Image
-# from PIL import Image, ImageOps
-from api import whAPI
 reload(sys)
 sys.setdefaultencoding('utf-8')
 
@@ -15,20 +14,21 @@ class Whimage:
     def __init__(self, parent=None):
         self.ofile = ''
         self.tfile = ''
-        self.mask = './image/mask.png'
+        self.mask = '../image/mask.png'
 
-    def circular(self,ofile='', output='',mask=''):
+    def circular(self, ofile='', output='',mask=''):
         if not os.path.exists(os.path.dirname(output)):
             os.makedirs(os.path.dirname(output))
 
         if mask == '':
             mask = self.mask
-        alpha = Image.open(mask).convert('L')
+        alpha = image.open(mask).convert('L')
         # im = Image.open(ofile.decode('utf8'))
-        im = Image.open(ofile)
+        im = image.open(ofile)
         outputimg = ImageOps.fit(im, alpha.size, centering=(0.5, 0.5))
         outputimg.putalpha(alpha)
         outputimg.save(output)
+        self.changeImgformat(output)
         return outputimg
 
     def getUserThumbnail(self,host='',rootdir='',corpPrefix='', userId=''):
@@ -39,7 +39,8 @@ class Whimage:
             os.makedirs(rootpath)
         imagePath = os.path.join(rootpath,filename)
         urllib.urlretrieve(url, imagePath)
-        return  imagePath
+        self.changeImgformat(imagePath)
+        return imagePath
 
     # def getThumbnail(self,host='',rootdir='',corpPrefix='', type='shot', ):
     def getThumbnail(self,env ,url=''):
@@ -55,7 +56,14 @@ class Whimage:
         serverName = 'http://%s'%env.ServerName
         thumbnailURL = urlparse.urljoin(serverName,url)
         urllib.urlretrieve(thumbnailURL,imagePath)
+        self.changeImgformat(imagePath)
         return imagePath
+
+    def changeImgformat(self, output):
+        pixmap2 = QtGui.QImage()
+        pixmap2.load(output)
+        pixmap2.save(output)
+
 
 
 #

@@ -1,15 +1,15 @@
 # coding:utf-8
-import sys
-import os
 import locale
+import os
 import shutil
+import sys
 
 from api import whAPI
 from api import whDataModels
-from wormholeAPI.whDataModels import whEnvData
+from api.whimage import Whimage
 from wormholeAPI.whAPIModels import whCompany
-from whimage import Whimage
-from pprint import pprint
+from wormholeAPI.whDataModels import whEnvData
+
 try:
     from PyQt4 import QtCore, QtGui, uic
     from PyQt4.QtGui import QApplication, QMainWindow, QPushButton, QWidget
@@ -77,6 +77,7 @@ class LocalPub(QWidget):
         maskimage = "%s/image/mask.png"%self.env.WhAppPath
         imageWh.circular(ofile=userimage, output=outputimage, mask=maskimage)
         pixmap = QtGui.QPixmap(outputimage)
+
         self.userIcon.setPixmap(pixmap)
 
         # download task image
@@ -120,16 +121,12 @@ class LocalPub(QWidget):
         if self.parent().languageSets == 'cn':
             self.setMenuText()
 
-
-
     def reTargetpath(self):
         self.uis = EditDirPathUI(self)
 
         self.uis.setGeometry(0,0,self.width(),self.height())
         self.uis.ok_btn2.clicked.connect(self.resetTargetPath)
         self.uis.show()
-
-
 
     def setMenuText(self):
         column_headers = [u'已选文件', u'发送文件位置', u'文件类型']
@@ -155,10 +152,6 @@ class LocalPub(QWidget):
         self.taskType_lb.setText(u'任务类型')
         self.UserNm_lb.setText(u'用户名称')
         self.UserId_lb.setText(u'用户ID')
-
-
-
-
 
     def setpubFile(self):
         original,target,type = self.tableWidget.selectedIndexes()
@@ -194,9 +187,6 @@ class LocalPub(QWidget):
         self.userIdV_lb.setText(self.env.UserID)
         self.userNmV_lb.setText(self.env.UserName)
 
-
-
-
     def gettargetpath(self,pathtype = 'file'):
         '''
 
@@ -219,7 +209,6 @@ class LocalPub(QWidget):
             return targetpath
         elif pathtype == 'preview':
             return targetpreview
-
 
     def selpreview(self):
         file = QtGui.QFileDialog.getOpenFileName(self, 'Select File', '.')
@@ -311,29 +300,33 @@ class LocalPub(QWidget):
         self.tableWidget.resizeRowsToContents()
 
     def resetTargetPath(self):
-        tpreviewpath = self.selectedPreview['tfile'].replace(
-            os.path.dirname(unicode(self.selectedPreview['tfile'])),
-            unicode(self.uis.tpreviewpath))
 
-        self.previewfile.setStatusTip(tpreviewpath)
-        self.previewfile.setToolTip(tpreviewpath)
-        self.selectedPreview['tfile'] = tpreviewpath
+        if self.uis.preview_le2.text() != '':
+            # print 'tpreviewpath : none'
+            tpreviewpath = self.selectedPreview['tfile'].replace(
+                os.path.dirname(unicode(self.selectedPreview['tfile'])),
+                unicode(self.uis.tpreviewpath))
 
-        tpubpath = unicode(self.uis.tpubpath)
+            self.previewfile.setStatusTip(tpreviewpath)
+            self.previewfile.setToolTip(tpreviewpath)
+            self.selectedPreview['tfile'] = tpreviewpath
 
-        for i in range(self.tableWidget.rowCount()):
-            if self.tableWidget.item(i, self.Column_type).text() == 'file':
-                otfile = unicode(self.tableWidget.item(i, self.Column_targetFile).text())
-                target = os.path.normpath(otfile.replace(os.path.dirname(otfile), tpubpath))
+        if self.uis.pub_le2.text() != '':
+            # print 'tpreviewpath : none'
+            tpubpath = unicode(self.uis.tpubpath)
+            for i in range(self.tableWidget.rowCount()):
+                if self.tableWidget.item(i, self.Column_type).text() == 'file':
+                    otfile = unicode(self.tableWidget.item(i, self.Column_targetFile).text())
+                    target = os.path.normpath(otfile.replace(os.path.dirname(otfile), tpubpath))
 
-                self.tableWidget.setItem(i, self.Column_targetFile, QtGui.QTableWidgetItem(unicode(target)))
+                    self.tableWidget.setItem(i, self.Column_targetFile, QtGui.QTableWidgetItem(unicode(target)))
 
-            elif self.tableWidget.item(i, self.Column_type).text() == 'directory':
-                otdir = unicode(self.tableWidget.item(i, self.Column_targetFile).text())
-                target = os.path.join(tpubpath, os.path.basename(otdir))
+                elif self.tableWidget.item(i, self.Column_type).text() == 'directory':
+                    otdir = unicode(self.tableWidget.item(i, self.Column_targetFile).text())
+                    target = os.path.join(tpubpath, os.path.basename(otdir))
 
-                self.tableWidget.setItem(i, self.Column_targetFile, QtGui.QTableWidgetItem(unicode(target)))
-            i += 1
+                    self.tableWidget.setItem(i, self.Column_targetFile, QtGui.QTableWidgetItem(unicode(target)))
+                i += 1
         self.tableWidget.resizeColumnsToContents()
         self.tableWidget.resizeRowsToContents()
 
@@ -344,7 +337,7 @@ class LocalPub(QWidget):
         pubfile = unicode(self.selectedFile)
         opubfile = ''
         # pub files copy
-        extrafiles = []
+        uploadFiles = []
         if pubfile == '':
             reply = QtGui.QMessageBox.question(self, 'Message',
                                                "please select one file", QtGui.QMessageBox.Ok ,
@@ -360,29 +353,46 @@ class LocalPub(QWidget):
                     ofile = unicode(self.tableWidget.item(i,self.Column_originFile).text())
                     tfile = unicode(self.tableWidget.item(i,self.Column_targetFile).text())
                     self.copyfileobj(unicode(ofile), unicode(tfile))
+                    uploadFiles.append(tfile)
                     if ofile == pubfile:
                         opubfile = ofile
                 elif self.tableWidget.item(i,self.Column_type).text() == 'directory':
                     odir = self.tableWidget.item(i,self.Column_originFile).text()
                     tdir = self.tableWidget.item(i,self.Column_targetFile).text()
+
                     self.copytree(unicode(odir),unicode(tdir))
+                    for subdir, dirs, files in os.walk(unicode(tdir,'utf-8')):
+
+                        print '-' * 20
+                        print subdir
+                        print dirs
+                        print files
+                        for file in files:
+                            uploadFiles.append(os.path.join(subdir,file))
+                        print '-' * 20
+
+            data = {}
 
             # movie file copy
-            omovie = self.selectedPreview['ofile']
-            tmovie = self.selectedPreview['tfile']
-            self.copyfileobj(unicode(omovie),unicode(tmovie))
+            if not self.selectedPreview['ofile'] == '':
+                omovie = self.selectedPreview['ofile']
+                tmovie = self.selectedPreview['tfile']
+                uploadFiles.append(tmovie)
+                self.copyfileobj(unicode(omovie),unicode(tmovie))
+                data["movie"] = tmovie
+                data["originalSelectedMovie"] = omovie
+            else:
+                data["movie"] = ''
+                data["originalSelectedMovie"] = ''
 
             comments =  unicode(self.textEdit.toPlainText())
 
             self.whUpdate = whAPI.Post(self.env.Company,self.env.ServerName)
-            data = {}
             data["projectId"] = self.env.Project
             data["versionNumber"] = self.env.VersionNumber
             data["publisherId"] = self.env.UserID
             data["taskTypeCd"] = self.env.TaskTypeCode
-            data["movie"] = tmovie
             data["originalSelectedFile"] = opubfile
-            data["originalSelectedMovie"] = omovie
             data["publishComment"] = comments
 
             if self.env.DirType == 'shot':
@@ -410,6 +420,7 @@ class LocalPub(QWidget):
         :return:
         '''
         """copy data from file-like object fsrc to file-like object fdst"""
+        print os.path.dirname(unicode(target))
         if not os.path.exists(os.path.dirname(target)):
             os.makedirs(unicode(os.path.dirname(target)))
         fsrc = file(source,'rb')
@@ -507,15 +518,12 @@ class EditDirPathUI(QWidget):
         self.tpubpath = unicode(QtGui.QFileDialog.getExistingDirectory(self, 'selectDirectory','.'))
         self.pub_le2.setText(self.tpubpath)
 
-
     def setMenuText(self):
         self.parent().setWindowTitle(u'更改路径')
         self.preview_lb2.setText(u'预览文件路径')
         self.pub_lb2.setText(u'上传文件路径')
         self.cancle_btn2.setText(u'取消')
         self.ok_btn2.setText(u'确认')
-
-
 
 
 class MainWindow(QMainWindow):
@@ -525,9 +533,7 @@ class MainWindow(QMainWindow):
         app_icon = QtGui.QIcon('WH_Icon16.png')
         self.setWindowIcon(app_icon)
 
-
         self.settings = QtCore.QSettings("__settings.ini", QtCore.QSettings.IniFormat)
-
 
         menubar = self.menuBar()
         settingmenu = menubar.addMenu("setting")

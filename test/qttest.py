@@ -1,14 +1,17 @@
  # -*- coding:utf-8 -*-
-import os
-from PyQt4 import QtCore, QtGui, QtNetwork
-from PyQt4.QtGui import *
-from PyQt4.QtCore import *
-from PyQt4 import uic
-import PyQt4.uic
-import sys
-import whimage
+ import os
+ import sys
 
-# app = QtGui.QApplication(sys.argv)
+ from PyQt4 import QtCore, QtGui
+ from PyQt4 import uic
+
+ from api import whimage
+
+
+
+
+
+ # app = QtGui.QApplication(sys.argv)
 # window = uic.loadUi("D:/Dev_project/wormhole/python/testProject/PyQtTest/testui.ui")
 # window.show()
 
