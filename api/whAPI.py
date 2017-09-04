@@ -1,6 +1,7 @@
 # -*- coding:utf-8 -*-
 import requests
 import json
+import urllib
 import os
 import sys
 import time
@@ -11,11 +12,14 @@ class Get:
         self.url = "http://%s"% url
 
     def __getdata(self, apiname="", data={}):
-        apiUrl = '%s/interface/%s.php?'%(self.url ,apiname)
-        data["corpPrefix"] = self.corpPrefix
-        api = requests.post(apiUrl,data=data)
-        return dict(json.loads(api.text,encoding="utf-8"))
+        __apiname = apiname
+        __data = data
+        __apiUrl = '%s/interface/%s.php?'%(self.url ,__apiname)
+        __data["corpPrefix"] = self.corpPrefix
+        __api = requests.post(__apiUrl,data=__data)
 
+        # return dict(json.loads(api.text,encoding="utf-8"))
+        return __api.json()
     def getToken(self,ID="",PW="",data = {}, dictype = False):
         apiname = "getToken"
         if dictype:
@@ -96,6 +100,7 @@ class Get:
         if dictype:
             pass
         else:
+            data["corpPrefix"] = self.corpPrefix
             data["projectId"] = projectId
             data["getType"] = getType
             data["seqId"] = seqId
@@ -354,8 +359,14 @@ class Post():
     def __getdata(self, apiname="", data={}):
         apiUrl = '%s/interface/%s.php?'%(self.url ,apiname)
         data["corpPrefix"] = self.corpPrefix
+        urldata = apiUrl
+        for k,v in data.iteritems():
+            urldata += '%s=%s&'%(k,v)
+        print urldata
+
         api = requests.post(apiUrl,data=data)
-        return dict(json.loads(api.text,encoding="utf-8"))
+        # return dict(json.loads(api.text,encoding="utf-8"))
+        return api.json()
 
     def recImportedAsset(self,projectId="",userId="",taskTypeCd="",assetId="",assetVersion="",workType="",shotNm="",assetNm="",workingAssetDir="",workingShotDir="",data={},dictype=False):
         apiname = "recordImportAsset"
@@ -386,19 +397,20 @@ class Post():
             data["versionNumber"] = versionNumber
             data["publisherId"] = publisherId
             data["taskTypeCd"] = taskTypeCd
-            data["filePublish"] = filePublish
-            data["fileHiRes"] = fileHiRes
-            data["fileAnimRes"] = fileAnimRes
-            data["fileLowRes"] = fileLowRes
-            data["movie"] = movie
+            data["filePublish"] = filePublish.replace('\\','/')
+            data["fileHiRes"] = fileHiRes.replace('\\','/')
+            data["fileAnimRes"] = fileAnimRes.replace('\\','/')
+            data["fileLowRes"] = fileLowRes.replace('\\','/')
+            data["movie"] = movie.replace('\\','/')
             data["tag"] = tag
-            data["originalSelectedFile"] = originalSelectedFile
-            data["originalSelectedMovie"] = originalSelectedMovie
+            data["originalSelectedFile"] = originalSelectedFile.replace('\\','/')
+            data["originalSelectedMovie"] = originalSelectedMovie.replace('\\','/')
             data["publishInfo"] = publishInfo
             data["publishComment"] = publishComment
             data["PdataType"] = PdataType
-            data["publishIcon"] = publishIcon
+            data["publishIcon"] = publishIcon.replace('\\','/')
         return self.__getdata(apiname=apiname, data=data)
+
 
 
     def recordImportShot(self, projectId="", shotId="", userId="", taskTypeCd="", workingShotDir="", versionNumber="", PdataType="",
@@ -414,9 +426,9 @@ class Post():
             data["workingShotDir"] = workingShotDir
             data["versionNumber"] = versionNumber
             data["PdataType"] = PdataType
-            data["file"] = file
-            data["cacheFile"] = cacheFile
-            data["preCompFile"] = preCompFile
+            data["file"] = file.replace('\\','/')
+            data["cacheFile"] = cacheFile.replace('\\','/')
+            data["preCompFile"] = preCompFile.replace('\\','/')
             data["userExtraGeom"] = userExtraGeom
         return self.__getdata(apiname=apiname, data=data)
 
@@ -433,16 +445,16 @@ class Post():
             data["assetList"] = assetList
             data["assetListVer"] = assetListVer
             data["PdataType"] = PdataType
-            data["file"] = file
-            data["cacheFile"] = cacheFile
-            data["preCompFile"] = preCompFile
+            data["file"] = file.replace('\\','/')
+            data["cacheFile"] = cacheFile.replace('\\','/')
+            data["preCompFile"] = preCompFile.replace('\\','/')
             data["userExtraGeom"] = userExtraGeom
-            data["movie"] = movie
-            data["originalSelectedFile"] = originalSelectedFile
-            data["originalSelectedMovie"] = originalSelectedMovie
+            data["movie"] = movie.replace('\\','/')
+            data["originalSelectedFile"] = originalSelectedFile.replace('\\','/')
+            data["originalSelectedMovie"] = originalSelectedMovie.replace('\\','/')
             data["publishInfo"] = publishInfo
             data["publishComment"] = publishComment
-            data["publishIcon"] = publishIcon
+            data["publishIcon"] = publishIcon.replace('\\','/')
         return self.__getdata(apiname=apiname, data=data)
 
 
@@ -455,7 +467,7 @@ class Post():
             if imgFileName != "":
                 print "imgFileName is wormhole server path"
             data["imgFileName"] = imgFileName
-            data["orgFilePath"] = orgFilePath
+            data["orgFilePath"] = orgFilePath.replace('\\','/')
             if tag !="":
                 print "comments : Set tag with multi tag by using ','. Category is '/'. To separate tag or Category like 'tag1,Category1/tag2,tag3'"
             data["tag"] = tag
@@ -471,7 +483,7 @@ class Post():
             data["versionNumber"] = versionNumber
             data["publisherId"] = publisherId
             data["taskTypeCd"] = taskTypeCd
-            data["movie"] = movie
+            data["movie"] = movie.replace('\\','/')
             data["publishComment"] = publishComment
         return self.__getdata(apiname=apiname, data=data)
 
@@ -484,8 +496,8 @@ class Post():
             data["nodeType"] = nodeType
             data["nodeId"] = nodeId
             data["taskTypeCd"] = taskTypeCd
-            data["movie"] = movie
-            data["uploadFile"] = uploadFile
+            data["movie"] = movie.replace('\\','/')
+            data["uploadFile"] = uploadFile.replace('\\','/')
             data["reviewComment"] = reviewComment
             data["userId"] = userId
             data["reviewerApr"] = reviewerApr
@@ -502,7 +514,7 @@ class Post():
             data["rvwUID"] = rvwUID
             data["rvwCMT"] = rvwCMT
             data["status"] = status
-            data["movFile"] = movFile
+            data["movFile"] = movFile.replace('\\','/')
         return self.__getdata(apiname=apiname, data=data)
 
     def thumbnail(self, projectId="",imgFileName="",workType="",data={}, dictype=False):
@@ -521,5 +533,5 @@ class Post():
             pass
         else:
             data["projectId"] = projectId
-            data["fileName"] = fileName
+            data["fileName"] = fileName.replace('\\','/')
         return self.__getdata(apiname=apiname, data=data)

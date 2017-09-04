@@ -32,8 +32,16 @@ class Ftpuploader(QWidget):
     def __init__(self, parent=None,copyfile_list=None):
         super(Ftpuploader, self).__init__(parent)
         self.copyfile_list = copyfile_list
-        self.env = self.parent().env
-        self.uploadFTP_fn()
+        parents = self.parent()
+        self.env = parents.env
+        self.progressBar = QtGui.QProgressBar()
+
+        self.progressBar.setWindowTitle('ftp upload')
+        self.progressBar.setGeometry(parents.width() / 5, parents.height() / 3, parents.width() / 2, parents.height() / 15)
+        self.progressBar.setGeometry()
+        self.progressBar.show()
+        self.progressBar.setValue(0)
+        # self.uploadFTP_fn()
 
     def uploadFTP_fn(self ):
 
@@ -96,11 +104,7 @@ class Ftpuploader(QWidget):
                         ftp.mkd(dirList[i])
                         ftp.cwd(tests)
                 # self.progressBar = progressBar()
-                self.progressBar = QtGui.QProgressBar()
 
-                self.progressBar.setWindowTitle('ftp upload')
-                self.progressBar.show()
-                self.progressBar.progressBar.setValue(0)
 
                 try:
                     UPloadFTPfile = open(file, 'rb')
@@ -115,4 +119,6 @@ class Ftpuploader(QWidget):
     def Reader(self, block):
         self.ftpuploadValue = self.ftpuploadValue + len(block)
         self.progressBar.progressBar.setValue(int(float(self.ftpuploadValue) / float(self.filesize) * 100))
+
+
 

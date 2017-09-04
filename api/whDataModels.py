@@ -14,8 +14,7 @@ class WormholeData:
 
     def gettaskinfo(self):
         shotname = u''
-
-        projName  =self.wh.getInfo(projectId=self.env.Project,getType='proj')['projectName']
+        projName  = self.wh.getInfo(projectId=self.env.Project,getType='proj')['projectName']
         if self.env.DirType == 'shot':
             for seqs in self.wh.Seqnames(projectId=self.env.Project)['sequenceList']:
                 if seqs['sequenceId'] == self.env.SeqName:

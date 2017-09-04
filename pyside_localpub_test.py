@@ -1,8 +1,9 @@
-# coding:utf-8
+# -*- coding:utf-8 -*-
 import locale
 import os
 import shutil
 import sys
+import urllib
 
 from api import whAPI
 from api import whDataModels
@@ -96,7 +97,7 @@ class LocalPub(QWidget):
 
 
         # tableWidget
-        self.tableWidget.setColumnCount(3)
+        self.tableWidget.setColumnCount(4)
         self.setFixedHeight(800)
 
         # set version
@@ -113,7 +114,7 @@ class LocalPub(QWidget):
         self.path_setting_btn.clicked.connect(self.reTargetpath)
 
         # column_headers = [u'선택한 파일', u'복사 위치', u'Type']
-        column_headers = [u'selected file', u'copy path', u'Type']
+        column_headers = [u'selected file', u'copy path', u'Type',u'upload']
         self.tableWidget.setHorizontalHeaderLabels(column_headers)
         self.tableWidget.resizeColumnsToContents()
         self.tableWidget.resizeRowsToContents()
@@ -129,7 +130,7 @@ class LocalPub(QWidget):
         self.uis.show()
 
     def setMenuText(self):
-        column_headers = [u'已选文件', u'发送文件位置', u'文件类型']
+        column_headers = [u'已选文件', u'发送文件位置', u'文件类型',u'upload']
         self.tableWidget.setHorizontalHeaderLabels(column_headers)
 
         self.tableWidget.resizeColumnsToContents()
@@ -154,8 +155,10 @@ class LocalPub(QWidget):
         self.UserId_lb.setText(u'用户ID')
 
     def setpubFile(self):
-        original,target,type = self.tableWidget.selectedIndexes()
+        original,target,type,uploadvalue = self.tableWidget.selectedIndexes()
         self.selectedFile = self.tableWidget.item(target.row(),1).text()
+
+
 
     def setinfo(self):
         # print self.env.__dict__
@@ -244,9 +247,10 @@ class LocalPub(QWidget):
         self.dialog.openBtn.clicked.connect(self.dialog.hide)
         self.dialog.tree = self.dialog.findChild(QtGui.QTreeView)
         self.selectedFiles2 = []
-        # self.dialog.tree.doubleClicked.connect(self.test)
+        self.dialog.tree.doubleClicked.connect(self.test)
         if self.dialog.exec_():
             inds = self.dialog.tree.selectionModel().selectedIndexes()
+            print type(inds)
             files = []
             for i in inds:
                 # print str(i.data().toString())
@@ -257,9 +261,9 @@ class LocalPub(QWidget):
             self.dialog.selectedFiles = files
         self.selfiles =  self.dialog.selectedFiles()
         self.settablewidget()
-    # def test(self,index):
-    #     item = self.dialog.selectedIndexes()[0]
-    #     print item.model().itemFromIndex(index).text()
+    def test(self,index):
+        item = self.dialog.selectedIndexes()[0]
+        print item.model().itemFromIndex(index).text()
 
     def settablewidget(self):
         i = self.tableWidget.rowCount()
@@ -267,11 +271,15 @@ class LocalPub(QWidget):
         self.tableWidget.setRowCount(self.tableWidget.rowCount()+self.selfiles.count())
         for file in self.selfiles:
             file = unicode(file)
+            self.progressBars = QtGui.QProgressBar()
+            self.progressBars.setMinimumWidth(200)
             if os.path.isfile(file):
                 target = os.path.normpath(file.replace(os.path.dirname(file), self.gettargetpath()))
                 self.tableWidget.setItem(i, 0, QtGui.QTableWidgetItem(unicode(file)))
                 self.tableWidget.setItem(i, 1, QtGui.QTableWidgetItem(unicode(target)))
                 self.tableWidget.setItem(i, 2, QtGui.QTableWidgetItem(unicode('file')))
+                self.tableWidget.setCellWidget(i, 3, self.progressBars)
+                # self.tableWidget.setCellWidget(i, 3, self.progressBars)
 
             elif os.path.isdir(file):
                 dir = unicode(file)
@@ -279,6 +287,7 @@ class LocalPub(QWidget):
                 self.tableWidget.setItem(i, 0, QtGui.QTableWidgetItem(unicode(dir)))
                 self.tableWidget.setItem(i, 1, QtGui.QTableWidgetItem(unicode(target)))
                 self.tableWidget.setItem(i, 2, QtGui.QTableWidgetItem(unicode('directory')))
+                self.tableWidget.setCellWidget(i, 3, self.progressBars)
             i+=1
         self.tableWidget.resizeColumnsToContents()
         self.tableWidget.resizeRowsToContents()
@@ -334,7 +343,9 @@ class LocalPub(QWidget):
         self.uis.close()
 
     def send(self):
-        pubfile = unicode(self.selectedFile)
+
+
+        pubfile = unicode(self.selectedFile.replace('\\','/'))
         opubfile = ''
         # pub files copy
         uploadFiles = []
@@ -348,14 +359,20 @@ class LocalPub(QWidget):
             else:
                 print 'no'
         else:
+            self.index = 0
             for i in range(self.tableWidget.rowCount()):
                 if self.tableWidget.item(i,self.Column_type).text() == 'file':
                     ofile = unicode(self.tableWidget.item(i,self.Column_originFile).text())
                     tfile = unicode(self.tableWidget.item(i,self.Column_targetFile).text())
+                    self.index = i
                     self.copyfileobj(unicode(ofile), unicode(tfile))
                     uploadFiles.append(tfile)
-                    if ofile == pubfile:
-                        opubfile = ofile
+                    self.tableWidget.scrollToItem(self.tableWidget.item(self.index, 10),
+                                                  QtGui.QAbstractItemView.PositionAtCenter)
+                    # if ofile == pubfile:
+                    #     opubfile = ofile
+                    opubfile = ofile
+
                 elif self.tableWidget.item(i,self.Column_type).text() == 'directory':
                     odir = self.tableWidget.item(i,self.Column_originFile).text()
                     tdir = self.tableWidget.item(i,self.Column_targetFile).text()
@@ -375,12 +392,13 @@ class LocalPub(QWidget):
 
             # movie file copy
             if not self.selectedPreview['ofile'] == '':
+                self.index = -1
                 omovie = self.selectedPreview['ofile']
                 tmovie = self.selectedPreview['tfile']
                 uploadFiles.append(tmovie)
                 self.copyfileobj(unicode(omovie),unicode(tmovie))
-                data["movie"] = tmovie
-                data["originalSelectedMovie"] = omovie
+                data["movie"] = tmovie.replace('\\','/')
+                data["originalSelectedMovie"] = unicode(omovie)
             else:
                 data["movie"] = ''
                 data["originalSelectedMovie"] = ''
@@ -397,20 +415,22 @@ class LocalPub(QWidget):
 
             if self.env.DirType == 'shot':
                 data["shotId"] = self.env.ShotId
-                data["file"] = pubfile
+                data["file"] = pubfile.replace('\\','/')
                 data["PdataType"] = unicode(self.pdatatype_cb.currentText())
+                # data = {k: unicode(v).encode("utf-8") for k, v in data.iteritems()}
                 self.whUpdate.publishShot(data=data,dictype=True)
 
             elif self.env.DirType == 'asset':
                 data["assetId"] = self.env.AssetPrefix
-                data["filePublish"] = pubfile
+                data["filePublish"] = pubfile.replace('\\','/')
                 data["PdataType"] = unicode(self.pdatatype_cb.currentText())
-                self.whUpdate.publishAsset(data=data, dictype=True)
+                # data = {k: unicode(v).encode("utf-8") for k, v in data.iteritems()}
+                print self.whUpdate.publishAsset(data=data, dictype=True)
 
             self.parent().closed()
 
 
-    def copyfileobj(self, source, target,  length=10485760):
+    def copyfileobj(self, source, target, length=10485760):
         '''
 
         :param fsrc: file(sourceFile,'rb')
@@ -420,18 +440,20 @@ class LocalPub(QWidget):
         :return:
         '''
         """copy data from file-like object fsrc to file-like object fdst"""
-        print os.path.dirname(unicode(target))
         if not os.path.exists(os.path.dirname(target)):
             os.makedirs(unicode(os.path.dirname(target)))
         fsrc = file(source,'rb')
         fdst = file(target,'wb')
         buffersize = 0
         filesize = os.path.getsize(source)
-        self.progressBar = QtGui.QProgressBar(self)
-        self.progressBar.show()
-
-        self.progressBar.setGeometry(self.width()/5,self.height()/3,self.width()/2,self.height()/15)
-        self.progressBar.setValue(0)
+        if self.index >= 0:
+            progressbar2 = self.tableWidget.cellWidget(self.index, 3)
+            progressbar2.setValue(0)
+        # self.progressBar = QtGui.QProgressBar(self)
+        # self.progressBar.show()
+        #
+        # self.progressBar.setGeometry(self.width()/5,self.height()/3,self.width()/2,self.height()/15)
+        # self.progressBar.setValue(0)
         QApplication.processEvents()
 
         try:
@@ -442,15 +464,20 @@ class LocalPub(QWidget):
                 buffersize += length
                 fdst.write(buf)
                 if filesize > buffersize:
-                    self.progressBar.setValue(int(float(buffersize) / float(filesize) * 100))
+                    # self.progressBar.setValue(int(float(buffersize) / float(filesize) * 100))
+                    if self.index >= 0:
+                        progressbar2.setValue(int(float(buffersize) / float(filesize) * 100))
                     QApplication.processEvents()
             fsrc.close()
             fdst.close()
-            self.progressBar.setValue(100)
+            # self.progressBar.setValue(100)
+            if self.index >= 0:
+                progressbar2.setValue(100)
+
         except:
             fsrc.close()
             fdst.close()
-        self.progressBar.hide()
+        # self.progressBar.hide()
 
     def copytree(self, src, dst, symlinks=False, ignore=None):
         names = os.listdir(src)

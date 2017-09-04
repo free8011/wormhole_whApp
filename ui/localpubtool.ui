@@ -984,6 +984,9 @@ QPushButton:hover
            <height>0</height>
           </size>
          </property>
+         <property name="autoScroll">
+          <bool>false</bool>
+         </property>
          <property name="selectionMode">
           <enum>QAbstractItemView::SingleSelection</enum>
          </property>
