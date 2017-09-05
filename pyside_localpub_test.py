@@ -3,11 +3,11 @@ import locale
 import os
 import shutil
 import sys
-import urllib
 
 from api import whAPI
 from api import whDataModels
 from api.whimage import Whimage
+from api.ftpUpload import Ftpuploader
 from wormholeAPI.whAPIModels import whCompany
 from wormholeAPI.whDataModels import whEnvData
 
@@ -51,6 +51,7 @@ class LocalPub(QWidget):
         self.Column_targetFile = 1
         self.Column_type = 2
         self.selectedFile = ""
+        self.failFtpuploaded = []
         self.selectedPreview = {'ofile':'',
                                 'tfile':''}
         self.nametype = self.parent().Nametype
@@ -294,6 +295,14 @@ class LocalPub(QWidget):
 
     def setTargetPath(self):
 
+        tpreviewpath = self.selectedPreview['tfile'].replace(
+            os.path.dirname(unicode(self.selectedPreview['tfile'])),
+            unicode(self.gettargetpath(pathtype='preview')))
+
+        self.previewfile.setStatusTip(tpreviewpath)
+        self.previewfile.setToolTip(tpreviewpath)
+        self.selectedPreview['tfile'] = tpreviewpath
+
         for i in range(self.tableWidget.rowCount()):
             if self.tableWidget.item(i, self.Column_type).text() == 'file':
                 ofile = unicode(self.tableWidget.item(i, self.Column_originFile).text())
@@ -425,9 +434,21 @@ class LocalPub(QWidget):
                 data["filePublish"] = pubfile.replace('\\','/')
                 data["PdataType"] = unicode(self.pdatatype_cb.currentText())
                 # data = {k: unicode(v).encode("utf-8") for k, v in data.iteritems()}
-                print self.whUpdate.publishAsset(data=data, dictype=True)
+                self.whUpdate.publishAsset(data=data, dictype=True)
+            if self.FTP_cbx.isChecked():
+                ftpupload = Ftpuploader(self)
 
-            self.parent().closed()
+                ftpupload.uploadFTP_fn(copyfile_list=uploadFiles)
+                if len(self.failFtpuploaded) > 0:
+                    msg = ' is Failed upload FTP \n '.join(self.failFtpuploaded)
+                elif len(self.failFtpuploaded) == 0:
+                    msg = 'Files uploaded successfully'
+
+            msg = 'Done'
+            confirmationBox = QtGui.QMessageBox.question(self,'Done',msg, QtGui.QMessageBox.Yes)
+            if confirmationBox == QtGui.QMessageBox.Yes:
+                self.parent().closed()
+
 
 
     def copyfileobj(self, source, target, length=10485760):
@@ -449,11 +470,7 @@ class LocalPub(QWidget):
         if self.index >= 0:
             progressbar2 = self.tableWidget.cellWidget(self.index, 3)
             progressbar2.setValue(0)
-        # self.progressBar = QtGui.QProgressBar(self)
-        # self.progressBar.show()
-        #
-        # self.progressBar.setGeometry(self.width()/5,self.height()/3,self.width()/2,self.height()/15)
-        # self.progressBar.setValue(0)
+
         QApplication.processEvents()
 
         try:
@@ -470,14 +487,11 @@ class LocalPub(QWidget):
                     QApplication.processEvents()
             fsrc.close()
             fdst.close()
-            # self.progressBar.setValue(100)
             if self.index >= 0:
                 progressbar2.setValue(100)
-
         except:
             fsrc.close()
             fdst.close()
-        # self.progressBar.hide()
 
     def copytree(self, src, dst, symlinks=False, ignore=None):
         names = os.listdir(src)
@@ -488,6 +502,9 @@ class LocalPub(QWidget):
         if not os.path.exists(dst):
             os.makedirs(dst)
         errors = []
+        if self.index >= 0:
+            progressbar2 = self.tableWidget.cellWidget(self.index, 3)
+            progressbar2.setValue(0)
         for name in names:
             if name in ignored_names:
                 continue
@@ -500,7 +517,9 @@ class LocalPub(QWidget):
                 elif os.path.isdir(srcname):
                     self.copytree(srcname, dstname, symlinks, ignore)
                 else:
-                    shutil.copy2(srcname, dstname)
+                    # shutil.copy2(srcname, dstname)
+                    self.copyfileobj(unicode(srcname), unicode(dstname))
+
                 # XXX What about devices, sockets etc.?
             except (IOError, os.error) as why:
                 errors.append((srcname, dstname, str(why)))

@@ -357,14 +357,10 @@ class Post():
         self.url = "http://%s"% url
 
     def __getdata(self, apiname="", data={}):
-        apiUrl = '%s/interface/%s.php?'%(self.url ,apiname)
-        data["corpPrefix"] = self.corpPrefix
-        urldata = apiUrl
-        for k,v in data.iteritems():
-            urldata += '%s=%s&'%(k,v)
-        print urldata
-
-        api = requests.post(apiUrl,data=data)
+        __apiUrl = '%s/interface/%s.php?'%(self.url ,apiname)
+        __data = data
+        __data["corpPrefix"] = self.corpPrefix
+        api = requests.post(__apiUrl,data=__data)
         # return dict(json.loads(api.text,encoding="utf-8"))
         return api.json()
 
@@ -390,7 +386,7 @@ class Post():
     def publishAsset(self,projectId="",assetId="",versionNumber="",publisherId="",taskTypeCd="",filePublish="",fileHiRes="",fileAnimRes="",fileLowRes="",movie="",tag="",originalSelectedFile="",originalSelectedMovie="",publishInfo="",publishComment="",PdataType="",publishIcon="",data={},dictype=False):
         apiname = "publishAsset"
         if dictype:
-            pass
+            data["publishComment"] = "<BR>".join(data["publishComment"].split("\n")).replace(' ', '%20')
         else:
             data["projectId"] = projectId
             data["assetId"] = assetId
@@ -406,7 +402,7 @@ class Post():
             data["originalSelectedFile"] = originalSelectedFile.replace('\\','/')
             data["originalSelectedMovie"] = originalSelectedMovie.replace('\\','/')
             data["publishInfo"] = publishInfo
-            data["publishComment"] = publishComment
+            data["publishComment"] = "<BR>".join(publishComment.split("\n")).replace(' ', '%20')
             data["PdataType"] = PdataType
             data["publishIcon"] = publishIcon.replace('\\','/')
         return self.__getdata(apiname=apiname, data=data)
@@ -435,7 +431,7 @@ class Post():
     def publishShot(self, projectId="",shotId="",versionNumber="",publisherId="",taskTypeCd="",assetList="",assetListVer="",PdataType="",file="",cacheFile="",preCompFile="",userExtraGeom="",movie="",originalSelectedFile="",originalSelectedMovie="",publishInfo="",publishComment="",publishIcon="", data={}, dictype=False):
         apiname = "publishShot"
         if dictype:
-            pass
+            data["publishComment"] = "<BR>".join(data["publishComment"].split("\n")).replace(' ', '%20')
         else:
             data["projectId"] = projectId
             data["shotId"] = shotId
@@ -453,7 +449,7 @@ class Post():
             data["originalSelectedFile"] = originalSelectedFile.replace('\\','/')
             data["originalSelectedMovie"] = originalSelectedMovie.replace('\\','/')
             data["publishInfo"] = publishInfo
-            data["publishComment"] = publishComment
+            data["publishComment"] = "<BR>".join(publishComment.split("\n")).replace(' ', '%20')
             data["publishIcon"] = publishIcon.replace('\\','/')
         return self.__getdata(apiname=apiname, data=data)
 

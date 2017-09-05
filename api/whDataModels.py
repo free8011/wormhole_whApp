@@ -13,6 +13,10 @@ class WormholeData:
 
 
     def gettaskinfo(self):
+        '''
+
+        :return: set Task infomations.
+        '''
         shotname = u''
         projName  = self.wh.getInfo(projectId=self.env.Project,getType='proj')['projectName']
         if self.env.DirType == 'shot':
@@ -22,12 +26,18 @@ class WormholeData:
             for shots in (self.wh.ShotNames(projectId=self.env.Project,seqId=self.env.SeqName)['shotList']):
                 if shots['shotId'] == self.env.ShotName:
                     shotname = unicode(shots['shotNm'])
+        elif self.env.DirType == 'asset':
+            tag = self.wh.AssetList(projectId=self.env.Project,assetId=self.env.AssetPrefix)['AssetList'][0]['tag']
+            if tag != '':
+                category = tag.split(',')[0]
+            elif tag == '':
+                category = ''
+            self.env.__setattr__('category',category)
+
         for users in self.wh.ProjectUsers(projectId=self.env.Project)['UserList']:
             if users['userId'] == self.env.UserID:
                 username = unicode(users['userName'])
-        # for tasktype in self.wh.TaskTypeList()['taskTypeList']:
-        #     if tasktype['code'] == self.env.TaskTypeCode:
-        #         tasktypename = unicode(tasktype['name'])
+
         self.env.__setattr__('SeqId','')
         self.env.__setattr__('ShotId','')
         if self.env.DirType == 'shot':
@@ -49,11 +59,18 @@ class WormholeData:
         return self.env
 
     def ProjectFilePath(self,nametype = 'id',pdatatype=''):
+        '''
+
+        :param nametype:
+        :param pdatatype:
+        :return: publish paths(actual path)
+        '''
         self.pathmap = {'[FILESERVERHOME]': self.env.ProjectHome, '[COMPANY]': self.env.Company,
                         '[PROJECTID]': self.env.Project, '[ASSETID]': self.env.AssetPrefix,
                         '[SEQUENCEID]': self.env.SeqId, '[SHOTID]': self.env.ShotId,
                         '[VERSIONNUMBER]':self.env.VersionNumber,'[PDATATYPE]':pdatatype,
-                        '[TASKTYPEID]':self.env.TaskType}
+                        '[TASKTYPEID]':self.env.TaskType,'[CATEGORY]':self.env.category,'[PUBLISHER]':self.env.UserID}
+
         if nametype == 'name':
             self.pathmap['[PROJECTID]']=self.env.ProjectName
             self.pathmap['[ASSETID]'] = self.env.AssetName
@@ -64,16 +81,22 @@ class WormholeData:
         ProjectFilePath = self.wh.ProjectFilePath(projectId=self.env.Project)['fixedPath']
         # pathmap = ProjectFilePath
 
-        for k in  ProjectFilePath.keys():
-            paths = ProjectFilePath[k]
-            for ks in self.pathmap.keys():
-                paths = paths.replace(str(ks), str(self.pathmap[ks]))
+        # for k in  ProjectFilePath.keys():
+        #     paths = ProjectFilePath[k]
+        #     for ks in self.pathmap.keys():
+        #         paths = paths.replace(str(ks), str(self.pathmap[ks]))
+
+        for k ,paths in  ProjectFilePath.iteritems():
+            for ks ,vs in self.pathmap.iteritems():
+                paths = paths.replace(str(ks), str(vs))
 
             self.projFilePath[k] = os.path.normpath(paths)
-
         return self.projFilePath
 
     def ThumbnailPath(self):
+        '''
+        :return: Thumbnail url path
+        '''
 
         taskinfodata = self.wh.ThumbnailPath(projectId=self.env.Project, getType=self.env.DirType,
                                              shotId=self.env.ShotId, assetId=self.env.AssetPrefix)

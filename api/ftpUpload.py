@@ -29,24 +29,24 @@ except AttributeError:
 
 
 class Ftpuploader(QWidget):
-    def __init__(self, parent=None,copyfile_list=None):
+    def __init__(self, parent=None):
         super(Ftpuploader, self).__init__(parent)
-        self.copyfile_list = copyfile_list
+        self.copyfile_list = None
         parents = self.parent()
         self.env = parents.env
-        self.progressBar = QtGui.QProgressBar()
+        self.progressBar = QtGui.QProgressBar(self)
 
         self.progressBar.setWindowTitle('ftp upload')
         self.progressBar.setGeometry(parents.width() / 5, parents.height() / 3, parents.width() / 2, parents.height() / 15)
-        self.progressBar.setGeometry()
+
         self.progressBar.show()
         self.progressBar.setValue(0)
         # self.uploadFTP_fn()
 
-    def uploadFTP_fn(self ):
+    def uploadFTP_fn(self,copyfile_list=None ):
 
         # uploadFTP.upload(appDir,self.selectCopyFile)
-
+        self.copyfile_list = copyfile_list
         parserFTP = SafeConfigParser()
         FTPtmpPath = "%s%s/%s/wormhole/python/FTPReview/tmp/FTPsetting.env"%( self.env.ProjectHome, self.env.Company, self.env.Project)
         if not os.path.exists(os.path.dirname(FTPtmpPath)):
@@ -59,6 +59,7 @@ class Ftpuploader(QWidget):
             settingFile.close()
 
         parserFTP.read(FTPtmpPath)
+
         test = parserFTP._sections
         for FTPlist in test.keys():
             ftpuploadFile = []
@@ -82,43 +83,54 @@ class Ftpuploader(QWidget):
             for file in self.copyfile_list:
                 self.ftpuploadValue = 0
                 self.filesize = os.path.getsize(file)
-                filepathlists = str(file).split(os.sep)
+                if os.sep in file:
+                    filepathlists = str(file).split(os.sep)
+                    file = '/'.join(filepathlists)
+
+                elif '/' in file:
+                    filepathlists = str(file).split('/')
                 filepathlists.pop(0)
                 filepathlists.insert(0, FTPDefaultDirRoot)
 
                 ftpfilepath = '/'.join(filepathlists)
                 ftpuploadFile.append(ftpfilepath)
 
-                dirList = ftpfilepath.split(os.sep)
+                if '/' in ftpfilepath:
+                    dirList = ftpfilepath.split('/')
 
-                dircheck =[ '']
+
+                dircheck =['']
                 for i in range(len(dirList)- 1 ):
-                    self.label_10.setText('FTPUpload..')
                     if not dirList[i] == '':
                         dircheck.append(dirList[i])
-                    tests = '/'.join(dircheck)
+                    dirs = '/'.join(dircheck)
                     try:
-                        ftp.cwd(tests)
+                        ftp.cwd(dirs)
 
                     except:
                         ftp.mkd(dirList[i])
-                        ftp.cwd(tests)
+                        ftp.cwd(dirs)
                 # self.progressBar = progressBar()
 
 
                 try:
-                    UPloadFTPfile = open(file, 'rb')
-                    ftp.storbinary('STOR %s'% ( filepathlists[-1].encode('utf-8')), UPloadFTPfile , callback=self.Reader,
-                                   blocksize=1024)
+                    UPloadFTPfile = open(unicode(file), 'rb')
+                    ftp.storbinary('STOR %s'% ( filepathlists[-1].encode('utf-8')), UPloadFTPfile , callback=self.Reader, blocksize=1024)
                     self.progressBar.close()
                     UPloadFTPfile.close()
-                except:
-                    print 'error %s' % file
 
+
+                except WindowsError:
+
+                    ftpuploadFalse = self.parent().failFtpuploaded
+                    ftpuploadFalse.append(unicode(file))
+                    print 'error %s' % file
+                except OSError as why:
+                    print why
 
     def Reader(self, block):
         self.ftpuploadValue = self.ftpuploadValue + len(block)
-        self.progressBar.progressBar.setValue(int(float(self.ftpuploadValue) / float(self.filesize) * 100))
+        self.progressBar.setValue(int(float(self.ftpuploadValue) / float(self.filesize) * 100))
 
 
 
