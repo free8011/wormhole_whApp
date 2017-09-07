@@ -5,17 +5,16 @@ import shutil
 import sys
 
 from api import whAPI
-from api import whDataModels
-from api.whimage import Whimage
+from api import whDatas
 from api.ftpUpload import Ftpuploader
-from wormholeAPI.whAPIModels import whCompany
-from wormholeAPI.whDataModels import whEnvData
+from api.whimage import Whimage
+from api.wormholeAPI.whAPIModels import whCompany
+from api.wormholeAPI.whDataModels import whEnvData
 
 try:
     from PyQt4 import QtCore, QtGui, uic
     from PyQt4.QtGui import QApplication, QMainWindow, QPushButton, QWidget
 except ImportError as a:
-    print 'use PySide'
     from PySide import QtCore, QtGui
     from PySide.QtGui import QApplication, QMainWindow, QPushButton, QWidget
     import pyside_uicfix
@@ -59,7 +58,7 @@ class LocalPub(QWidget):
         self.whcom = whCompany()
         self.envs = whEnvData('./wormHole.env')
         # self.env = gettaskinfo(self.envs)
-        self.whdatas = whDataModels.WormholeData(self.envs)
+        self.whdatas = whDatas.WormholeData(self.envs)
         self.env = self.whdatas.gettaskinfo()
         # self.projectPubPaths = self.whdatas.ProjectFilePath()
 
@@ -98,7 +97,7 @@ class LocalPub(QWidget):
 
 
         # tableWidget
-        self.tableWidget.setColumnCount(4)
+        self.tableWidget.setColumnCount(5)
         self.setFixedHeight(800)
 
         # set version
@@ -114,8 +113,7 @@ class LocalPub(QWidget):
         self.pdatatype_cb.editTextChanged.connect(self.setTargetPath)
         self.path_setting_btn.clicked.connect(self.reTargetpath)
 
-        # column_headers = [u'선택한 파일', u'복사 위치', u'Type']
-        column_headers = [u'selected file', u'copy path', u'Type',u'upload']
+        column_headers = [u'selected file', u'copy path', u'Type',u'upload',u'ftpupload']
         self.tableWidget.setHorizontalHeaderLabels(column_headers)
         self.tableWidget.resizeColumnsToContents()
         self.tableWidget.resizeRowsToContents()
@@ -125,13 +123,13 @@ class LocalPub(QWidget):
 
     def reTargetpath(self):
         self.uis = EditDirPathUI(self)
-
         self.uis.setGeometry(0,0,self.width(),self.height())
         self.uis.ok_btn2.clicked.connect(self.resetTargetPath)
         self.uis.show()
 
+
     def setMenuText(self):
-        column_headers = [u'已选文件', u'发送文件位置', u'文件类型',u'upload']
+        column_headers = [u'已选文件', u'发送文件位置', u'文件类型',u'upload',u'ftpupload']
         self.tableWidget.setHorizontalHeaderLabels(column_headers)
 
         self.tableWidget.resizeColumnsToContents()
@@ -156,10 +154,8 @@ class LocalPub(QWidget):
         self.UserId_lb.setText(u'用户ID')
 
     def setpubFile(self):
-        original,target,type,uploadvalue = self.tableWidget.selectedIndexes()
+        original,target,type,uploadvalue,ftpupload = self.tableWidget.selectedIndexes()
         self.selectedFile = self.tableWidget.item(target.row(),1).text()
-
-
 
     def setinfo(self):
         # print self.env.__dict__
@@ -235,8 +231,6 @@ class LocalPub(QWidget):
             # self.selectedPreview = file
             self.preview_VLayout.setContentsMargins(30,0,0,0)
 
-
-
     def attach(self):
         self.selfiles = None
         self.dialog = QtGui.QFileDialog(self,'Title', u".")
@@ -248,7 +242,7 @@ class LocalPub(QWidget):
         self.dialog.openBtn.clicked.connect(self.dialog.hide)
         self.dialog.tree = self.dialog.findChild(QtGui.QTreeView)
         self.selectedFiles2 = []
-        self.dialog.tree.doubleClicked.connect(self.test)
+        # self.dialog.tree.doubleClicked.connect(self.test)
         if self.dialog.exec_():
             inds = self.dialog.tree.selectionModel().selectedIndexes()
             print type(inds)
@@ -262,9 +256,9 @@ class LocalPub(QWidget):
             self.dialog.selectedFiles = files
         self.selfiles =  self.dialog.selectedFiles()
         self.settablewidget()
-    def test(self,index):
-        item = self.dialog.selectedIndexes()[0]
-        print item.model().itemFromIndex(index).text()
+    # def test(self,index):
+    #     item = self.dialog.selectedIndexes()[0]
+    #     print item.model().itemFromIndex(index).text()
 
     def settablewidget(self):
         i = self.tableWidget.rowCount()
@@ -273,13 +267,16 @@ class LocalPub(QWidget):
         for file in self.selfiles:
             file = unicode(file)
             self.progressBars = QtGui.QProgressBar()
+            self.progressBars2 = QtGui.QProgressBar()
             self.progressBars.setMinimumWidth(200)
+            self.progressBars2.setMinimumWidth(200)
             if os.path.isfile(file):
                 target = os.path.normpath(file.replace(os.path.dirname(file), self.gettargetpath()))
                 self.tableWidget.setItem(i, 0, QtGui.QTableWidgetItem(unicode(file)))
                 self.tableWidget.setItem(i, 1, QtGui.QTableWidgetItem(unicode(target)))
                 self.tableWidget.setItem(i, 2, QtGui.QTableWidgetItem(unicode('file')))
                 self.tableWidget.setCellWidget(i, 3, self.progressBars)
+                self.tableWidget.setCellWidget(i, 4, self.progressBars2)
                 # self.tableWidget.setCellWidget(i, 3, self.progressBars)
 
             elif os.path.isdir(file):
@@ -289,6 +286,7 @@ class LocalPub(QWidget):
                 self.tableWidget.setItem(i, 1, QtGui.QTableWidgetItem(unicode(target)))
                 self.tableWidget.setItem(i, 2, QtGui.QTableWidgetItem(unicode('directory')))
                 self.tableWidget.setCellWidget(i, 3, self.progressBars)
+                self.tableWidget.setCellWidget(i, 4, self.progressBars2)
             i+=1
         self.tableWidget.resizeColumnsToContents()
         self.tableWidget.resizeRowsToContents()
@@ -352,18 +350,15 @@ class LocalPub(QWidget):
         self.uis.close()
 
     def send(self):
-
-
         pubfile = unicode(self.selectedFile.replace('\\','/'))
         opubfile = ''
         # pub files copy
         uploadFiles = []
         if pubfile == '':
             reply = QtGui.QMessageBox.question(self, 'Message',
-                                               "please select one file", QtGui.QMessageBox.Ok ,
-                                               QtGui.QMessageBox.Ok)
+                                               "please select one file", QtGui.QMessageBox.Ok )
 
-            if reply == QtGui.QMessageBox.Yes:
+            if reply == QtGui.QMessageBox.Ok:
                 print 'yes'
             else:
                 print 'no'
@@ -388,14 +383,9 @@ class LocalPub(QWidget):
 
                     self.copytree(unicode(odir),unicode(tdir))
                     for subdir, dirs, files in os.walk(unicode(tdir,'utf-8')):
-
-                        print '-' * 20
-                        print subdir
-                        print dirs
-                        print files
                         for file in files:
                             uploadFiles.append(os.path.join(subdir,file))
-                        print '-' * 20
+
 
             data = {}
 
@@ -447,7 +437,16 @@ class LocalPub(QWidget):
             msg = 'Done'
             confirmationBox = QtGui.QMessageBox.question(self,'Done',msg, QtGui.QMessageBox.Yes)
             if confirmationBox == QtGui.QMessageBox.Yes:
-                self.parent().closed()
+                pass
+                # self.parent().closed()
+    #             self.uploadui()
+    # def uploadui(self):
+    #
+    #     self.upui = ResultUI(self)
+    #
+    #     self.upui.setGeometry(0,0,self.width(),self.height())
+    #     self.upui.pushButton.clicked.connect(lambda : self.close())
+    #     self.upui.show()
 
 
 
@@ -505,6 +504,9 @@ class LocalPub(QWidget):
         if self.index >= 0:
             progressbar2 = self.tableWidget.cellWidget(self.index, 3)
             progressbar2.setValue(0)
+        print 'directory num = ',names,':',len(names)
+
+
         for name in names:
             if name in ignored_names:
                 continue
@@ -517,8 +519,7 @@ class LocalPub(QWidget):
                 elif os.path.isdir(srcname):
                     self.copytree(srcname, dstname, symlinks, ignore)
                 else:
-                    # shutil.copy2(srcname, dstname)
-                    self.copyfileobj(unicode(srcname), unicode(dstname))
+                    shutil.copy2(srcname, dstname)
 
                 # XXX What about devices, sockets etc.?
             except (IOError, os.error) as why:
@@ -572,6 +573,19 @@ class EditDirPathUI(QWidget):
         self.ok_btn2.setText(u'确认')
 
 
+class ResultUI(QWidget):
+    def __init__(self, parent=None):
+        super(ResultUI, self).__init__(parent)
+
+        uipath = '%s/ui/uploadCheck.ui' % self.parent().env.WhAppPath
+        # print uipath
+        try:
+            pyside_uicfix.loadUi(uipath, self)
+        except NameError:
+            uic.loadUi(uipath, self)
+
+
+
 class MainWindow(QMainWindow):
     def __init__(self, parent=None):
         super(MainWindow, self).__init__(parent)
@@ -584,7 +598,6 @@ class MainWindow(QMainWindow):
         menubar = self.menuBar()
         settingmenu = menubar.addMenu("setting")
         editmenu = menubar.addMenu('Edit')
-
 
         self.setkeyname = QtGui.QAction(settingmenu)
         self.setkeyname.setCheckable(True)
@@ -627,7 +640,6 @@ class MainWindow(QMainWindow):
         elif self.settings.value('defaultkey').toString() == 'id':
             self.setkeyid.setChecked(True)
         self.Nametype = self.settings.value('defaultkey').toString()
-
         self.start()
 
     def closeEvent(self, event):
@@ -663,28 +675,23 @@ class MainWindow(QMainWindow):
         self.pubtool.close()
         self.start()
 
-    def preference(self):
-        print 'preference'
-
     def start(self):
-
         self.resize(1058,800)
         self.pubtool = LocalPub(self)
         if self.settings.value('languageSet').toString() == 'en':
             self.setWindowTitle(u"Local Publish Tool")
         elif self.settings.value('languageSet').toString() == 'cn':
             self.setWindowTitle(u"发布其他文件")
-
         self.setCentralWidget(self.pubtool)
-        # self.pubtool.path_setting_btn.clicked.connect(self.resultUI)
         self.show()
 
-    def editdirpathUI(self):
-        self.resize(1058, 295)
-        self.edp = EditDirPathUI(self)
-        self.setCentralWidget(self.edp)
+
+    def resultUI(self):
+        self.resize(1024, 720)
+        self.result_View = ResultUI(self)
+        self.setCentralWidget(self.result_View)
         self.setWindowTitle("Check target path")
-        self.edp.ok_btn2.clicked.connect(self.pubtool)
+        self.result_View.pushButton.clicked.connect(self.pubtool)
         self.show()
 
 

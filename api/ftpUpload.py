@@ -1,6 +1,5 @@
-import sys
-import os
 import ftplib
+import os
 from ConfigParser import SafeConfigParser
 
 try:

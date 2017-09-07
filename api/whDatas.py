@@ -1,16 +1,14 @@
-from wormholeAPI.whDataModels import whEnvData
-from wormholeAPI.whAPIModels import whCompany
 import os
+
 import whAPI
 from checkos import ClientOs
-from pprint import pprint
+
+
 class WormholeData:
     def __init__(self, env):
         self.env = env
         self.projFilePath = {}
-
         self.wh = whAPI.Get(corpPrefix=self.env.Company, url=self.env.ServerName)
-
 
     def gettaskinfo(self):
         '''
