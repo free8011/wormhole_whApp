@@ -6,7 +6,6 @@ try:
     from PyQt4 import QtCore, QtGui, uic
     from PyQt4.QtGui import QApplication, QMainWindow, QPushButton, QWidget
 except ImportError as a:
-    print 'use PySide'
     from PySide import QtCore, QtGui
     from PySide.QtGui import QApplication, QMainWindow, QPushButton, QWidget
     import pyside_uicfix

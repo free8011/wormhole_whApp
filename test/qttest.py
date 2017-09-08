@@ -42,8 +42,8 @@ class MainWindow(MainWindowBase,MainWindowForm):
         self.addfilesgui(filenames)
 
     def addfilesgui(self, files):
-        for file in files:
-            self.filelabel = QtGui.QLabel(file)
+        for filename in files:
+            self.filelabel = QtGui.QLabel(filename)
             self.verticalLayout_4.addWidget(self.filelabel)
         self.verticalLayout_4.setAlignment(Qt.AlignTop)
 
