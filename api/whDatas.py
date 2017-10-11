@@ -24,6 +24,7 @@ class WormholeData:
             for shots in (self.wh.ShotNames(projectId=self.env.Project,seqId=self.env.SeqName)['shotList']):
                 if shots['shotId'] == self.env.ShotName:
                     shotname = unicode(shots['shotNm'])
+            self.env.__setattr__('category',None)
         elif self.env.DirType == 'asset':
             tag = self.wh.AssetList(projectId=self.env.Project,assetId=self.env.AssetPrefix)['AssetList'][0]['tag']
             if tag != '':

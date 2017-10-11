@@ -1,7 +1,11 @@
 # -*- coding:utf-8 -*-
-
+import os
 from api import whAPI
 from pprint import pprint
+import bcopy
+path = "D:\\tmp\\wormholeTest"
+num_files = sum([len(files) for r, d, files in os.walk(path)])
+print num_files
 
 url = "simo.wormholepipeline.co.kr"
 corpPrefix = "simo"
@@ -9,7 +13,7 @@ projectId = "test"
 reckey = "24"
 userId ="c2m"
 
-wh = whAPI.Get(corpPrefix=corpPrefix,url=url)
+# wh = whAPI.Get(corpPrefix=corpPrefix,url=url)
 
 
 
@@ -26,13 +30,13 @@ wh = whAPI.Get(corpPrefix=corpPrefix,url=url)
 
 
 
-
-apiname = "TaskInfo"
-getTaskinfoDic = { "projectId":projectId, "reckey":reckey, "userId":userId}
-getTaskinfoDic2 = {"reckey":reckey}
-
-TaskinfData = wh.TaskInfo(data=getTaskinfoDic)
-pprint(TaskinfData)
+#
+# apiname = "TaskInfo"
+# getTaskinfoDic = { "projectId":projectId, "reckey":reckey, "userId":userId}
+# getTaskinfoDic2 = {"reckey":reckey}
+#
+# TaskinfData = wh.TaskInfo(data=getTaskinfoDic)
+# pprint(TaskinfData)
 #
 # # getTaskInfo2 = wh.TaskInfo2(data=getTaskinfoDic,dictype=True)
 # getTaskInfo2 = wh.TaskInfo(projectId=projectId,reckey=reckey,userId=userId)
@@ -58,7 +62,7 @@ pprint(TaskinfData)
 # projPath = wh.ProjectFilePath(projectId=projectId)
 # pprint(projPath)
 # print help(wh.ProjPath)
-pprint(wh.ProjPath(projectId=projectId,type='A'))
+# pprint(wh.ProjPath(projectId=projectId,type='A'))
 
 
 

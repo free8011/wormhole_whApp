@@ -4,7 +4,7 @@ import sys
 import urllib
 import urlparse
 from PIL import Image as image
-import ImageOps
+from PIL import ImageOps
 from PyQt4 import QtGui
 
 reload(sys)

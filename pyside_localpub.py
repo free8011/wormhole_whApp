@@ -1,8 +1,8 @@
 # -*- coding:utf-8 -*-
-import locale
-import os
-import shutil
 import sys
+import os
+import locale
+import shutil
 
 from api import whAPI
 from api import whDatas
@@ -14,9 +14,12 @@ from api.wormholeAPI.whDataModels import whEnvData
 try:
     from PyQt4 import QtCore, QtGui, uic
     from PyQt4.QtGui import QApplication, QMainWindow, QPushButton, QWidget
+    from PyQt4.QtCore import QStringList
 except ImportError as a:
+    print 'using PySide'
     from PySide import QtCore, QtGui
     from PySide.QtGui import QApplication, QMainWindow, QPushButton, QWidget
+    from PySide.QtCore import QStringList
     import pyside_uicfix
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
@@ -51,6 +54,7 @@ class LocalPub(QWidget):
         self.Column_type = 2
         self.selectedFile = ""
         self.failFtpuploaded = []
+        self.num_files = 1
         self.selectedPreview = {'ofile':'',
                                 'tfile':''}
         self.nametype = self.parent().Nametype
@@ -95,6 +99,10 @@ class LocalPub(QWidget):
         self.previewfile.setStyleSheet(
             "QLabel{color: rgb(125, 125, 125);}")
 
+        # set datatype combobox signal
+        self.pdatatype_cb.currentIndexChanged.connect(self.setTargetPath)
+        self.pdatatype_cb.editTextChanged.connect(self.setTargetPath)
+        self.path_setting_btn.clicked.connect(self.reTargetpath)
 
         # tableWidget
         self.tableWidget.setColumnCount(5)
@@ -108,18 +116,31 @@ class LocalPub(QWidget):
         self.preview_btn.clicked.connect(self.selpreview)
         self.send_btn.clicked.connect(self.send)
 
+        # tableWidget signal
         self.tableWidget.itemSelectionChanged.connect(self.setpubFile)
-        self.pdatatype_cb.currentIndexChanged.connect(self.setTargetPath)
-        self.pdatatype_cb.editTextChanged.connect(self.setTargetPath)
-        self.path_setting_btn.clicked.connect(self.reTargetpath)
 
+        # set table widget column and resize setting
         column_headers = [u'selected file', u'copy path', u'Type',u'upload',u'ftpupload']
         self.tableWidget.setHorizontalHeaderLabels(column_headers)
         self.tableWidget.resizeColumnsToContents()
         self.tableWidget.resizeRowsToContents()
 
+        # set mouse right clicked signal
+        self.tableWidget.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        self.tableWidget.customContextMenuRequested.connect(self.delListViewitem)
+
         if self.parent().languageSets == 'cn':
             self.setMenuText()
+
+    # mouse right clicked event. make menu and delete item
+    def delListViewitem(self, pos):
+        menu = QtGui.QMenu(self.tableWidget)
+        quitAction = menu.addAction("Delete item")
+        action = menu.exec_(self.tableWidget.mapToGlobal(pos))
+
+        if action == quitAction:
+            selected =  self.tableWidget.currentRow()
+            self.tableWidget.removeRow(selected)
 
     def reTargetpath(self):
         self.uis = EditDirPathUI(self)
@@ -158,7 +179,6 @@ class LocalPub(QWidget):
         self.selectedFile = self.tableWidget.item(target.row(),1).text()
 
     def setinfo(self):
-        # print self.env.__dict__
         self.projIdV_lb.setText(unicode(self.env.Project))
         self.projNmV_lb.setText(unicode(self.env.ProjectName))
         if self.env.DirType == "asset":
@@ -189,7 +209,6 @@ class LocalPub(QWidget):
 
     def gettargetpath(self,pathtype = 'file'):
         '''
-
         :param pathtype: 'file' or 'preview'. default value : 'file'
         :return:
         '''
@@ -203,8 +222,7 @@ class LocalPub(QWidget):
         elif self.env.DirType == 'asset':
             targetpath = paths['fixAssetPubPath']
             targetpreview = paths['fixAssetMovPath']
-        # targetpath = u"C:\\Users\\simo\\Pictures\\pubtest임"
-        # pprint(paths)
+
         if pathtype == 'file':
             return targetpath
         elif pathtype == 'preview':
@@ -232,6 +250,7 @@ class LocalPub(QWidget):
             self.preview_VLayout.setContentsMargins(30,0,0,0)
 
     def attach(self):
+
         self.selfiles = None
         self.dialog = QtGui.QFileDialog(self,'Title', u".")
         self.dialog.setOption(self.dialog.DontUseNativeDialog, True)
@@ -240,25 +259,19 @@ class LocalPub(QWidget):
         self.dialog.openBtn = [x for x in btns if 'open' in str(x.text()).lower()][0]
         self.dialog.openBtn.clicked.disconnect()
         self.dialog.openBtn.clicked.connect(self.dialog.hide)
+
         self.dialog.tree = self.dialog.findChild(QtGui.QTreeView)
-        self.selectedFiles2 = []
-        # self.dialog.tree.doubleClicked.connect(self.test)
+        self.selectedFiles = QStringList()
+
         if self.dialog.exec_():
             inds = self.dialog.tree.selectionModel().selectedIndexes()
-            print type(inds)
-            files = []
+
             for i in inds:
-                # print str(i.data().toString())
                 if i.column() == 0:
                     filepath = os.path.join(unicode(self.dialog.directory().absolutePath()), unicode(i.data().toString()))
-                    files.append(unicode(os.path.normpath(filepath)))
-                    self.selectedFiles2.append(unicode(filepath))
-            self.dialog.selectedFiles = files
+                    self.selectedFiles.append(QtCore.QString(unicode(filepath)))
         self.selfiles =  self.dialog.selectedFiles()
         self.settablewidget()
-    # def test(self,index):
-    #     item = self.dialog.selectedIndexes()[0]
-    #     print item.model().itemFromIndex(index).text()
 
     def settablewidget(self):
         i = self.tableWidget.rowCount()
@@ -270,6 +283,13 @@ class LocalPub(QWidget):
             self.progressBars2 = QtGui.QProgressBar()
             self.progressBars.setMinimumWidth(200)
             self.progressBars2.setMinimumWidth(200)
+            progressbarStyle = "QProgressBar{border - radius: 5px; text - align: center;}"
+            self.progressBars.setStyleSheet(progressbarStyle)
+            self.progressBars2.setStyleSheet(progressbarStyle)
+
+            self.progressBars.setAlignment(QtCore.Qt.AlignCenter)
+            self.progressBars2.setAlignment(QtCore.Qt.AlignCenter)
+
             if os.path.isfile(file):
                 target = os.path.normpath(file.replace(os.path.dirname(file), self.gettargetpath()))
                 self.tableWidget.setItem(i, 0, QtGui.QTableWidgetItem(unicode(file)))
@@ -357,20 +377,38 @@ class LocalPub(QWidget):
         if pubfile == '':
             reply = QtGui.QMessageBox.question(self, 'Message',
                                                "please select one file", QtGui.QMessageBox.Ok )
-
             if reply == QtGui.QMessageBox.Ok:
                 print 'yes'
             else:
                 print 'no'
         else:
+
+            if self.FTP_cbx.isChecked():
+                ftpupload = Ftpuploader(self)
+
+                # ftpupload.uploadFTP_fn(copyfile=uploadFiles)
+                # if len(self.failFtpuploaded) > 0:
+                #     msg = ' is Failed upload FTP \n '.join(self.failFtpuploaded)
+                # elif len(self.failFtpuploaded) == 0:
+                #     msg = 'Files uploaded successfully'
+
+
+
             self.index = 0
             for i in range(self.tableWidget.rowCount()):
                 if self.tableWidget.item(i,self.Column_type).text() == 'file':
                     ofile = unicode(self.tableWidget.item(i,self.Column_originFile).text())
                     tfile = unicode(self.tableWidget.item(i,self.Column_targetFile).text())
                     self.index = i
+                    self.num_files = 1
                     self.copyfileobj(unicode(ofile), unicode(tfile))
-                    uploadFiles.append(tfile)
+
+                    if self.FTP_cbx.isChecked():
+                        ftpprogressbar = self.tableWidget.cellWidget(self.index, 4)
+                        # ftpupload.uploadFTP_fn(unicode(tfile),ftpprogressbar)
+                        ftpupload.uploadFTP_fn(copyfile=unicode(tfile), progressbar=ftpprogressbar)
+
+                    # uploadFiles.append(tfile)
                     self.tableWidget.scrollToItem(self.tableWidget.item(self.index, 10),
                                                   QtGui.QAbstractItemView.PositionAtCenter)
                     # if ofile == pubfile:
@@ -380,11 +418,17 @@ class LocalPub(QWidget):
                 elif self.tableWidget.item(i,self.Column_type).text() == 'directory':
                     odir = self.tableWidget.item(i,self.Column_originFile).text()
                     tdir = self.tableWidget.item(i,self.Column_targetFile).text()
-
+                    self.num_files = sum([len(files) for r, d, files in os.walk(os.path.normcase(str(odir)))])
                     self.copytree(unicode(odir),unicode(tdir))
-                    for subdir, dirs, files in os.walk(unicode(tdir,'utf-8')):
-                        for file in files:
-                            uploadFiles.append(os.path.join(subdir,file))
+                    if self.FTP_cbx.isChecked():
+                        for subdir, dirs, files in os.walk(unicode(tdir,'utf-8')):
+                            for file in files:
+                                ftpprogressbar = self.tableWidget.cellWidget(self.index, 4)
+                                # ftpupload.uploadFTP_fn(unicode(tfile),ftpprogressbar)
+                                ftpupload.uploadFTP_fn(copyfile=unicode(os.path.join(subdir,file)), progressbar=ftpprogressbar)
+
+                                # uploadFiles.append(os.path.join(subdir,file))
+
 
 
             data = {}
@@ -394,8 +438,11 @@ class LocalPub(QWidget):
                 self.index = -1
                 omovie = self.selectedPreview['ofile']
                 tmovie = self.selectedPreview['tfile']
-                uploadFiles.append(tmovie)
                 self.copyfileobj(unicode(omovie),unicode(tmovie))
+                # uploadFiles.append(tmovie)
+                if self.FTP_cbx.isChecked():
+                    ftpupload.uploadFTP_fn(copyfile=unicode(tmovie))
+
                 data["movie"] = tmovie.replace('\\','/')
                 data["originalSelectedMovie"] = unicode(omovie)
             else:
@@ -425,16 +472,18 @@ class LocalPub(QWidget):
                 data["PdataType"] = unicode(self.pdatatype_cb.currentText())
                 # data = {k: unicode(v).encode("utf-8") for k, v in data.iteritems()}
                 self.whUpdate.publishAsset(data=data, dictype=True)
-            if self.FTP_cbx.isChecked():
-                ftpupload = Ftpuploader(self)
 
-                ftpupload.uploadFTP_fn(copyfile_list=uploadFiles)
-                if len(self.failFtpuploaded) > 0:
-                    msg = ' is Failed upload FTP \n '.join(self.failFtpuploaded)
-                elif len(self.failFtpuploaded) == 0:
-                    msg = 'Files uploaded successfully'
+            # if self.FTP_cbx.isChecked():
+            #     ftpupload = Ftpuploader(self)
+            #
+            #     ftpupload.uploadFTP_fn(copyfile=uploadFiles)
+            #     if len(self.failFtpuploaded) > 0:
+            #         msg = ' is Failed upload FTP \n '.join(self.failFtpuploaded)
+            #     elif len(self.failFtpuploaded) == 0:
+            #         msg = 'Files uploaded successfully'
 
             msg = 'Done'
+
             confirmationBox = QtGui.QMessageBox.question(self,'Done',msg, QtGui.QMessageBox.Yes)
             if confirmationBox == QtGui.QMessageBox.Yes:
                 pass
@@ -470,6 +519,7 @@ class LocalPub(QWidget):
             progressbar2 = self.tableWidget.cellWidget(self.index, 3)
             progressbar2.setValue(0)
 
+
         QApplication.processEvents()
 
         try:
@@ -483,6 +533,9 @@ class LocalPub(QWidget):
                     # self.progressBar.setValue(int(float(buffersize) / float(filesize) * 100))
                     if self.index >= 0:
                         progressbar2.setValue(int(float(buffersize) / float(filesize) * 100))
+                        # self.progressBars.setFormat('%p% - %v - %m/10')
+                        self.progressBars.setFormat('%p%')
+
                     QApplication.processEvents()
             fsrc.close()
             fdst.close()
@@ -505,7 +558,7 @@ class LocalPub(QWidget):
             progressbar2 = self.tableWidget.cellWidget(self.index, 3)
             progressbar2.setValue(0)
         print 'directory num = ',names,':',len(names)
-
+        copyed = 0
 
         for name in names:
             if name in ignored_names:
@@ -519,8 +572,9 @@ class LocalPub(QWidget):
                 elif os.path.isdir(srcname):
                     self.copytree(srcname, dstname, symlinks, ignore)
                 else:
-                    shutil.copy2(srcname, dstname)
-
+                    # shutil.copy2(srcname, dstname)
+                    self.copyfileobj(srcname, dstname)
+                    copyed += 1
                 # XXX What about devices, sockets etc.?
             except (IOError, os.error) as why:
                 errors.append((srcname, dstname, str(why)))
@@ -583,7 +637,6 @@ class ResultUI(QWidget):
             pyside_uicfix.loadUi(uipath, self)
         except NameError:
             uic.loadUi(uipath, self)
-
 
 
 class MainWindow(QMainWindow):

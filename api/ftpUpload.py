@@ -1,3 +1,5 @@
+# -*-coding:utf-8 -*-
+
 import ftplib
 import os
 from ConfigParser import SafeConfigParser
@@ -9,19 +11,19 @@ except ImportError as a:
     from PySide import QtCore, QtGui
     from PySide.QtGui import QApplication, QMainWindow, QPushButton, QWidget
     import pyside_uicfix
-try:
-    _fromUtf8 = QtCore.QString.fromUtf8
-except AttributeError:
-    def _fromUtf8(s):
-        return s
-
-try:
-    _encoding = QtGui.QApplication.UnicodeUTF8
-    def _translate(context, text, disambig):
-        return QtGui.QApplication.translate(context, text, disambig, _encoding)
-except AttributeError:
-    def _translate(context, text, disambig):
-        return QtGui.QApplication.translate(context, text, disambig)
+# try:
+#     _fromUtf8 = QtCore.QString.fromUtf8
+# except AttributeError:
+#     def _fromUtf8(s):
+#         return s
+#
+# try:
+#     _encoding = QtGui.QApplication.UnicodeUTF8
+#     def _translate(context, text, disambig):
+#         return QtGui.QApplication.translate(context, text, disambig, _encoding)
+# except AttributeError:
+#     def _translate(context, text, disambig):
+#         return QtGui.QApplication.translate(context, text, disambig)
 
 
 
@@ -32,19 +34,31 @@ class Ftpuploader(QWidget):
         self.copyfile_list = None
         parents = self.parent()
         self.env = parents.env
-        self.progressBar = QtGui.QProgressBar(self)
 
-        self.progressBar.setWindowTitle('ftp upload')
-        self.progressBar.setGeometry(parents.width() / 5, parents.height() / 3, parents.width() / 2, parents.height() / 15)
+    def uploadFTP_fn(self, copyfile=None, progressbar = None):
+        """
+        :param copyfile: input Type is list or string or unicode
+        :return:
+        """
+        if progressbar != None:
+            self.progressBar = progressbar
+            self.progressBar.setFormat('%p%')
+        else:
+            self.progressBar = QtGui.QProgressBar()
+            self.parent().preview_VLayout.addWidget(self.progressBar)
 
-        self.progressBar.show()
-        self.progressBar.setValue(0)
-        # self.uploadFTP_fn()
 
-    def uploadFTP_fn(self,copyfile_list=None ):
 
-        # uploadFTP.upload(appDir,self.selectCopyFile)
-        self.copyfile_list = copyfile_list
+        # self.show()
+        self.copyfile_list = []
+        if type(copyfile) is list:
+            self.copyfile_list = copyfile
+        elif type(copyfile) is str or unicode:
+            self.copyfile_list.append(copyfile)
+        elif TypeError("input must be a list or string or unicode"):
+            print TypeError
+
+
         parserFTP = SafeConfigParser()
         FTPtmpPath = "%s%s/%s/wormhole/python/FTPReview/tmp/FTPsetting.env"%( self.env.ProjectHome, self.env.Company, self.env.Project)
         if not os.path.exists(os.path.dirname(FTPtmpPath)):
@@ -58,10 +72,10 @@ class Ftpuploader(QWidget):
 
         parserFTP.read(FTPtmpPath)
 
-        test = parserFTP._sections
-        for FTPlist in test.keys():
+        sections = parserFTP._sections
+        for FTPlist in sections.keys():
             ftpuploadFile = []
-            userFTP = test[FTPlist]
+            userFTP = sections[FTPlist]
 
             FTPHOST = userFTP.get('host')
             FTPID = userFTP.get('id')
@@ -77,6 +91,7 @@ class Ftpuploader(QWidget):
                 ftp.connect(FTPHOST, FTPPORT)
 
             ftp.login(FTPID, FTPPW)
+
 
             for file in self.copyfile_list:
                 self.ftpuploadValue = 0
@@ -94,8 +109,7 @@ class Ftpuploader(QWidget):
                 ftpuploadFile.append(ftpfilepath)
 
                 if '/' in ftpfilepath:
-                    dirList = ftpfilepath.split('/')
-
+                    dirList = ftpfilepath.decode('utf-8').split('/')
 
                 dircheck =['']
                 for i in range(len(dirList)- 1 ):
@@ -103,23 +117,17 @@ class Ftpuploader(QWidget):
                         dircheck.append(dirList[i])
                     dirs = '/'.join(dircheck)
                     try:
+                        # ftp.cwd(dirs)
                         ftp.cwd(dirs)
-
                     except:
                         ftp.mkd(dirList[i])
                         ftp.cwd(dirs)
-                # self.progressBar = progressBar()
-
-
                 try:
                     UPloadFTPfile = open(unicode(file), 'rb')
                     ftp.storbinary('STOR %s'% ( filepathlists[-1].encode('utf-8')), UPloadFTPfile , callback=self.Reader, blocksize=1024)
-                    self.progressBar.close()
+                    # self.progressBar.close()
                     UPloadFTPfile.close()
-
-
                 except WindowsError:
-
                     ftpuploadFalse = self.parent().failFtpuploaded
                     ftpuploadFalse.append(unicode(file))
                     print 'error %s' % file
@@ -128,7 +136,13 @@ class Ftpuploader(QWidget):
 
     def Reader(self, block):
         self.ftpuploadValue = self.ftpuploadValue + len(block)
-        self.progressBar.setValue(int(float(self.ftpuploadValue) / float(self.filesize) * 100))
+        if self.ftpuploadValue < self.filesize:
+            self.progressBar.setValue(int(float(self.ftpuploadValue) / float(self.filesize) * 100))
+
+        else:
+            self.progressBar.setValue(100)
+        # self.progressBar.setFormat('%p% (%s)'%(self.parent().num_files))
+
 
 
 

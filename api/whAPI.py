@@ -431,7 +431,7 @@ class Post():
     def publishShot(self, projectId="",shotId="",versionNumber="",publisherId="",taskTypeCd="",assetList="",assetListVer="",PdataType="",file="",cacheFile="",preCompFile="",userExtraGeom="",movie="",originalSelectedFile="",originalSelectedMovie="",publishInfo="",publishComment="",publishIcon="", data={}, dictype=False):
         apiname = "publishShot"
         if dictype:
-            data["publishComment"] = "<BR>".join(data["publishComment"].split("\n")).replace(' ', '%20')
+            data["publishComment"] = "<BR>".join(data["publishComment"].split("\n"))
         else:
             data["projectId"] = projectId
             data["shotId"] = shotId
