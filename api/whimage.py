@@ -60,6 +60,10 @@ class Whimage:
         return imagePath
 
     def changeImgformat(self, output):
+        img = image.open(output)
+        if img.format != "PNG":
+            rgb_im = img.convert('RGB')
+            rgb_im.save(output)
         pixmap2 = QtGui.QImage()
         pixmap2.load(output)
         pixmap2.save(output)
