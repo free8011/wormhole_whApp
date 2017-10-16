@@ -11,16 +11,10 @@ from api.whimage import Whimage
 from api.wormholeAPI.whAPIModels import whCompany
 from api.wormholeAPI.whDataModels import whEnvData
 
-try:
-    from PyQt4 import QtCore, QtGui, uic
-    from PyQt4.QtGui import QApplication, QMainWindow, QPushButton, QWidget
-    from PyQt4.QtCore import QStringList
-except ImportError as a:
-    print 'using PySide'
-    from PySide import QtCore, QtGui
-    from PySide.QtGui import QApplication, QMainWindow, QPushButton, QWidget
-    from PySide.QtCore import QStringList
-    import pyside_uicfix
+from PyQt4 import QtCore, QtGui, uic
+from PyQt4.QtGui import QApplication, QMainWindow, QPushButton, QWidget
+
+
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
 except AttributeError:
@@ -67,10 +61,9 @@ class LocalPub(QWidget):
         # self.projectPubPaths = self.whdatas.ProjectFilePath()
 
         uipath = '%s/ui/localpubtool.ui'%self.env.WhAppPath
-        try:
-            pyside_uicfix.loadUi(uipath, self)
-        except NameError:
-            uic.loadUi(uipath, self)
+
+        uic.loadUi(uipath, self)
+
         self.setinfo()
         self.pdatatype_cb.addItems(getListOfDataType)
         # self.pdatatype_cb.setStyleSheet(QComboBox{})
@@ -261,7 +254,10 @@ class LocalPub(QWidget):
         self.dialog.openBtn.clicked.connect(self.dialog.hide)
 
         self.dialog.tree = self.dialog.findChild(QtGui.QTreeView)
-        self.selectedFiles = QStringList()
+        try:
+            self.selectedFiles = QtCore.QStringList()
+        except:
+            self.selectedFiles = QtGui.QStringListModel()
 
         if self.dialog.exec_():
             inds = self.dialog.tree.selectionModel().selectedIndexes()
@@ -679,6 +675,7 @@ class MainWindow(QMainWindow):
 
         Languagemenu.addAction(self.actionEnglish)
         Languagemenu.addAction(self.actionChinese)
+
         if self.settings.value('languageSet').toString() == 'en':
             self.languageSets = 'en'
             self.actionEnglish.setChecked(True)
@@ -697,7 +694,7 @@ class MainWindow(QMainWindow):
 
     def closeEvent(self, event):
         if self.actionEnglish.isChecked():
-            self.settings.setValue('languageSet','en')
+            self.settings.setValue('c','en')
         elif self.actionChinese.isChecked():
             self.settings.setValue('languageSet','cn')
 
