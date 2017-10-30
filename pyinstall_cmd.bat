@@ -1,1 +1,1 @@
-pyinstaller --onefile --noconsole --icon=WH_Icon256.ico --name=localPublishTool.exe pyside_localpub.py
+pyinstaller --onefile --noconsole --icon=WH_Icon256.ico --log-level=DEBUG --name=localPublishTool.exe pyside_localpub.py

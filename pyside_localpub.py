@@ -482,8 +482,8 @@ class LocalPub(QWidget):
 
             confirmationBox = QtGui.QMessageBox.question(self,'Done',msg, QtGui.QMessageBox.Yes)
             if confirmationBox == QtGui.QMessageBox.Yes:
+                self.parent().closed()
                 pass
-                # self.parent().closed()
     #             self.uploadui()
     # def uploadui(self):
     #
@@ -593,10 +593,8 @@ class EditDirPathUI(QWidget):
         self.tpubpath = ''
         uipath = '%s/ui/replacePath.ui'%self.parent().env.WhAppPath
         # print uipath
-        try:
-            pyside_uicfix.loadUi(uipath, self)
-        except NameError:
-            uic.loadUi(uipath, self)
+
+        uic.loadUi(uipath, self)
         self.preview_btn2.clicked.connect(self.getpreviewpath)
         self.pub_btn2.clicked.connect(self.getpubpath)
         self.cancle_btn2.clicked.connect(self.close)
@@ -629,10 +627,7 @@ class ResultUI(QWidget):
 
         uipath = '%s/ui/uploadCheck.ui' % self.parent().env.WhAppPath
         # print uipath
-        try:
-            pyside_uicfix.loadUi(uipath, self)
-        except NameError:
-            uic.loadUi(uipath, self)
+        uic.loadUi(uipath, self)
 
 
 class MainWindow(QMainWindow):
